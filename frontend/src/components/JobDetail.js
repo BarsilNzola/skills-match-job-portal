@@ -23,15 +23,22 @@ const JobDetail = ({ match }) => {
     };
 
     return (
-        <div>
+        <div className="container mt-5">
             {job ? (
-                <>
-                    <h1>{job.title}</h1>
-                    <p>{job.company}</p>
-                    <p>{job.location}</p>
-                    <p>{job.description}</p>
-                    <button onClick={handleApply}>Apply</button>
-                </>
+                <div className="card">
+                    <div className="card-header">
+                        <h1>{job.title}</h1>
+                        <h5>{job.company}</h5>
+                    </div>
+                    <div className="card-body">
+                        <p><strong>Location:</strong> {job.location}</p>
+                        <p><strong>Description:</strong></p>
+                        <p>{job.description}</p>
+                    </div>
+                    <div className="card-footer">
+                        <button className="btn btn-primary" onClick={handleApply}>Apply</button>
+                    </div>
+                </div>
             ) : (
                 <p>Loading...</p>
             )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchJobs } from '../services/api';
 import JobList from '../components/JobList';
+import { Container, Row, Col, Form } from 'react-bootstrap';
 
 const JobPage = () => {
     const [jobs, setJobs] = useState([]);
@@ -29,22 +30,30 @@ const JobPage = () => {
     );
 
     return (
-        <div>
-            <h1>Job Listings</h1>
-            <input
-                type="text"
-                placeholder="Search by skill or title"
-                value={searchTerm}
-                onChange={handleSearch}
-            />
-            <input
-                type="text"
-                placeholder="Location"
-                value={location}
-                onChange={handleLocationChange}
-            />
+        <Container>
+            <h1 className="my-4 text-center">Job Listings</h1>
+
+            <Row className="mb-4">
+                <Col md={6}>
+                    <Form.Control
+                        type="text"
+                        placeholder="Search by skill or title"
+                        value={searchTerm}
+                        onChange={handleSearch}
+                    />
+                </Col>
+                <Col md={6}>
+                    <Form.Control
+                        type="text"
+                        placeholder="Location"
+                        value={location}
+                        onChange={handleLocationChange}
+                    />
+                </Col>
+            </Row>
+
             <JobList jobs={filteredJobs} />
-        </div>
+        </Container>
     );
 };
 
