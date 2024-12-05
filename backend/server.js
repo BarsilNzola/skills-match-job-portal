@@ -1,10 +1,9 @@
-// backend/server.js
 const express = require('express');
 const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
 const jobRoutes = require('./routes/jobRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
-const mongoose = require('mongoose');
+const sequelize = require('./config/db');  // Sequelize import for MySQL
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 
@@ -19,7 +18,7 @@ app.use(express.json());
 app.use(cors());
 app.use(bodyParser.json());
 
-// Define a basic route
+// Define basic routes
 app.use('/users', userRoutes);
 app.use('/jobs', jobRoutes);
 app.use('/applications', applicationRoutes);
@@ -27,8 +26,12 @@ app.get('/', (req, res) => {
     res.send('Skill-Match Job Portal API');
 });
 
-// Synchronize database 
-sequelize.sync();
+// Synchronize Sequelize database 
+sequelize.sync().then(() => {
+    console.log('Database synced successfully!');
+}).catch((err) => {
+    console.log('Error syncing database:', err);
+});
 
 // Port and server
 const PORT = process.env.PORT || 5000;
