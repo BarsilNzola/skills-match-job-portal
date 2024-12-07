@@ -1,15 +1,14 @@
-# Simplified example using spaCy for skill extraction
-import spacy
-import json
+import nltk
+from nltk.tokenize import word_tokenize
 
-nlp = spacy.load("en_core_web_sm")
+# Download NLTK data for tokenization
+nltk.download('punkt')
+
+# List of skills to match
 skills = ["JavaScript", "Python", "React", "Django", "Node.js", "Machine Learning"]
 
+# Function to extract skills from a text
 def extract_skills(text):
-    doc = nlp(text)
-    extracted_skills = [skill for skill in skills if skill.lower() in text.lower()]
+    words = word_tokenize(text.lower())  # Tokenize and convert to lower case
+    extracted_skills = [skill for skill in skills if skill.lower() in words]
     return extracted_skills
-
-# Example usage
-text = "I have experience in JavaScript, React, and Machine Learning."
-print(extract_skills(text))

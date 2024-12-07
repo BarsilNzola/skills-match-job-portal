@@ -35,12 +35,13 @@ const User = sequelize.define('User', {
 });
 
 // Hash password before saving a new user
-User.beforeCreate(async (user) => {
-    if (user.password) {
-        const hashedPassword = await bcrypt.hash(user.password, 10); // Hash the password with 10 salt rounds
-        user.password = hashedPassword;
-    }
-});
+// User.beforeCreate(async (user) => {
+//   if (user.password) {
+//      const hashedPassword = await bcrypt.hash(user.password, 10); // Hash the password with 10 salt rounds
+//        console.log('Generated hash in beforeCreate:', hashedPassword);
+//      user.password = hashedPassword;
+//    }
+//});
 
 // Compare password method for login
 User.prototype.comparePassword = async function (password) {

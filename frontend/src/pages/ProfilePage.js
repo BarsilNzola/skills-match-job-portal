@@ -1,23 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { fetchUserProfile } from '../services/api';
+import { fetchUserProfile } from '../services/api';  // Import the updated API function
 import { Container, Row, Col, Card, Spinner } from 'react-bootstrap';
 
 const ProfilePage = () => {
-    const { id } = useParams(); // Access the route parameter
     const [user, setUser] = useState(null);
 
     useEffect(() => {
         const getUserProfile = async () => {
             try {
-                const response = await fetchUserProfile(id); // Use `id` from useParams
+                const response = await fetchUserProfile(); // No need for `id` anymore
                 setUser(response.data);
             } catch (error) {
                 console.error("Error fetching user profile:", error);
             }
         };
         getUserProfile();
-    }, [id]);
+    }, []);  // Empty dependency array ensures it runs once when the component mounts
 
     return (
         <Container className="my-5">

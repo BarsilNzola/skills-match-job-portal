@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Job = require('../models/Job');
-const { validateJobData } = require('../utils/validators'); // Create a custom validator (optional)
+const { validateJobData } = require('../utils/Validator'); // Create a custom validator (optional)
 const authMiddleware = require('../middleware/auth'); // Add auth middleware (optional)
 
 // Create a new job
