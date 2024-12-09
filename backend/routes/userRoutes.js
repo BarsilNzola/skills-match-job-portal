@@ -1,9 +1,10 @@
 const express = require('express');
-const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const User = require('../models/User');
-const auth = require('../middleware/auth');
+const User = require('../models/User'); // Ensure this is the correct path to your User model
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');  // Adjust the path if necessary
+
+const router = express.Router();
 
 // Validation function to check if the user input is correct
 const validateRegistration = (data) => {
@@ -16,109 +17,121 @@ const validateRegistration = (data) => {
     return null;
 };
 
-// Create a new user
+// Route: Register a new user
 router.post('/register', async (req, res) => {
     try {
         const validationError = validateRegistration(req.body);
         if (validationError) {
-            return res.status(400).send({ error: validationError });
+            return res.status(400).json({ error: validationError });
         }
 
         // Check if email already exists
         const existingUser = await User.findOne({ where: { email: req.body.email } });
         if (existingUser) {
-            return res.status(400).send({ error: 'Email already registered' });
+            return res.status(400).json({ error: 'Email already registered.' });
         }
 
-        // Hash password and create user
+        // Hash the password
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        console.log('Generated hash during registration:', hashedPassword);
+
+        // Create the new user
         const user = await User.create({
             name: req.body.name,
             email: req.body.email,
             password: hashedPassword,
             skills: req.body.skills || [],
-            profile: req.body.profile || { experience: '', education: '', projects: [] }
+            profile: req.body.profile || { experience: '', education: '', projects: [] },
         });
-        console.log('Hash stored in DB:', user.password);
 
-
-        // Generate JWT token with expiration (e.g., 1 hour)
+        // Generate JWT token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        res.status(201).send({ user, token });
+        res.status(201).json({ message: 'User registered successfully.', user, token });
     } catch (error) {
         console.error('Error during registration:', error);
-        res.status(500).send({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
 
-// Login user
+// Route: User login
 router.post('/login', async (req, res) => {
     try {
-        const user = await User.findOne({ where: { email: req.body.email } });
-        if (!user) {
-            return res.status(400).send({ error: 'Invalid login credentials' });
+        const { email, password } = req.body;
+
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required.' });
         }
 
-        console.log('User found:', user.email); // Log the user email
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid login credentials.' });
+        }
 
-        // Log the entered password and the stored hash for debugging
-        console.log('Entered password:', req.body.password);
-        console.log('Stored hash:', user.password);  // Check the stored hash
-        console.log('Salt rounds used in stored hash:', user.password.split('$')[2]); // Extract salt rounds
+        // Compare passwords
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Invalid login credentials.' });
+        }
 
-        bcrypt.compare(req.body.password.trim(), user.password.trim(), (err, result) => {
-            if (err) {
-                console.error('Error comparing passwords:', err);
-                return res.status(500).send({ error: 'Internal server error' });
-            }
-        
-            console.log('Password comparison result:', result); // Should print true if they match
-            
-            if (!result) {
-                return res.status(400).send({ error: 'Invalid login credentials' });
-            }
-        
-            // Continue with the token generation
-            const token = jwt.sign(
-                { id: user.id, email: user.email },  // Include user ID and email in the token payload
-                process.env.JWT_SECRET,  // Secret key from environment variables
-                { expiresIn: '1h' }  // Token expiration time (1 hour)
-            );
-    
-            // Send token back to client
-            res.json({ token });  // Send the token in the response
-        });        
+        // Generate JWT token
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
 
+        res.status(200).json({ message: 'Login successful.', token });
     } catch (error) {
         console.error('Error during login:', error);
-        res.status(500).send({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
 
-
-
-// Get user profile
-router.get('/profile', auth, async (req, res) => {
+// Route: Get user profile
+router.get('/profile', authMiddleware , async (req, res) => {
     try {
-        // Get user ID from the decoded token (auth middleware should decode and add user to req.user)
-        const userId = req.user.id;
-
-        const user = await User.findByPk(userId); // Fetch user by ID from the token
+        const user = await User.findByPk(req.user.id); // User ID comes from auth middleware
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'User not found.' });
         }
-        res.json({
+
+        res.status(200).json({
+            id: user.id,
             name: user.name,
             email: user.email,
             skills: user.skills || [],
         });
     } catch (error) {
         console.error('Error fetching user profile:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
 
+// Route: Update user skills
+router.put('/skills', authMiddleware , async (req, res) => {
+    try {
+        const { skills } = req.body;
+
+        // Validate skills input
+        if (!skills || !Array.isArray(skills)) {
+            return res.status(400).json({ error: 'Skills must be an array.' });
+        }
+
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        // Update user's skills
+        user.skills = skills;
+        await user.save();
+
+        res.status(200).json({ message: 'Skills updated successfully.', skills: user.skills });
+    } catch (error) {
+        console.error('Error updating skills:', error);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+});
 
 module.exports = router;

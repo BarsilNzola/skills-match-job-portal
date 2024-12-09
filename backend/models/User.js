@@ -3,6 +3,7 @@ const sequelize = require('../config/db');
 const bcrypt = require('bcryptjs'); // For password hashing
 
 const User = sequelize.define('User', {
+
     name: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -22,6 +23,10 @@ const User = sequelize.define('User', {
             len: [6, 100], // Password must be between 6 and 100 characters
         },
     },
+    role: {
+        type: DataTypes.ENUM('user', 'admin'),
+        defaultValue: 'user',
+    },
     skills: {
         type: DataTypes.JSON, // Can store skills as a JSON object or array
         allowNull: true, // Allow null if no skills are provided
@@ -33,15 +38,6 @@ const User = sequelize.define('User', {
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt
 });
-
-// Hash password before saving a new user
-// User.beforeCreate(async (user) => {
-//   if (user.password) {
-//      const hashedPassword = await bcrypt.hash(user.password, 10); // Hash the password with 10 salt rounds
-//        console.log('Generated hash in beforeCreate:', hashedPassword);
-//      user.password = hashedPassword;
-//    }
-//});
 
 // Compare password method for login
 User.prototype.comparePassword = async function (password) {

@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const Application = require('../models/Application');
-const auth = require('../middleware/auth');  // Ensure you're authenticating requests
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');  // Adjust the path if necessary
+  // Ensure you're authenticating requests
 
 // Create a new job application
-router.post('/', auth, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
     try {
         // Assuming the request body contains user ID, job ID, and any other relevant data
         const application = await Application.create({
@@ -22,7 +23,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Get all applications for a user
-router.get('/user/:userId', auth, async (req, res) => {
+router.get('/user/:userId', authMiddleware, async (req, res) => {
     try {
         const applications = await Application.findAll({
             where: { userId: req.params.userId }
@@ -54,7 +55,7 @@ router.get('/job/:jobId', async (req, res) => {
 });
 
 // Update an application status (e.g., from "applied" to "interviewed")
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
     try {
         const application = await Application.findByPk(req.params.id);
         if (!application) {
@@ -73,7 +74,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Delete an application (optional, for removing a job application)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
     try {
         const application = await Application.findByPk(req.params.id);
         if (!application) {
