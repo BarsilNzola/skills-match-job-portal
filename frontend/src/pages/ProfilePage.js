@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { fetchUserProfile, updateUserSkills, fetchRecommendedJobs } from '../services/api'; // Include new API function
-import { Container, Row, Col, Card, Spinner, Button, Form } from 'react-bootstrap';
+import { fetchUserProfile, updateUserSkills, fetchRecommendedJobs } from '../services/api';
+import { Container, Row, Col, Card, Spinner, Button, Form, Alert } from 'react-bootstrap';
 
 const ProfilePage = () => {
     const [user, setUser] = useState(null);
     const [skills, setSkills] = useState('');
     const [isEditing, setIsEditing] = useState(false); // Tracks edit mode
     const [recommendedJobs, setRecommendedJobs] = useState([]);
+    const [loadingJobs, setLoadingJobs] = useState(true); // State to track loading jobs
+    const [error, setError] = useState(null); // State to track errors for job fetching
 
     useEffect(() => {
         const getUserProfile = async () => {
@@ -33,11 +35,19 @@ const ProfilePage = () => {
     };
 
     const fetchJobs = async () => {
+        setLoadingJobs(true); // Start loading
+        setError(null); // Reset error state
         try {
             const jobsResponse = await fetchRecommendedJobs();
-            setRecommendedJobs(jobsResponse.data);
+            if (jobsResponse.data && jobsResponse.data.length > 0) {
+                setRecommendedJobs(jobsResponse.data);
+            } else {
+                setRecommendedJobs([]); // Set to empty array if no jobs
+            }
         } catch (error) {
-            console.error("Error fetching recommended jobs:", error);
+            setError("Error fetching recommended jobs."); // Set error if failed
+        } finally {
+            setLoadingJobs(false); // End loading
         }
     };
 
@@ -97,25 +107,36 @@ const ProfilePage = () => {
             )}
 
             <h2 className="text-center mt-5">Recommended Jobs</h2>
-            <Row>
-                {recommendedJobs.length ? (
-                    recommendedJobs.map((job) => (
-                        <Col md={4} key={job.id} className="mb-4">
-                            <Card>
-                                <Card.Body>
-                                    <Card.Title>{job.title}</Card.Title>
-                                    <Card.Text>{job.description}</Card.Text>
-                                    <Button variant="primary">Apply</Button>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    ))
-                ) : (
-                    <div className="d-flex justify-content-center">
-                        <Spinner animation="border" />
-                    </div>
-                )}
-            </Row>
+            
+            {/* Show error if there is an issue with fetching jobs */}
+            {error && <Alert variant="danger" className="text-center">{error}</Alert>}
+
+            {/* Handle job loading state */}
+            {loadingJobs ? (
+                <div className="d-flex justify-content-center">
+                    <Spinner animation="border" />
+                </div>
+            ) : (
+                <Row>
+                    {recommendedJobs.length === 0 ? (
+                        <Alert variant="info" className="w-100 text-center">
+                            No recommendations for now
+                        </Alert>
+                    ) : (
+                        recommendedJobs.map((job) => (
+                            <Col md={4} key={job.id} className="mb-4">
+                                <Card>
+                                    <Card.Body>
+                                        <Card.Title>{job.title}</Card.Title>
+                                        <Card.Text>{job.description}</Card.Text>
+                                        <Button variant="primary">Apply</Button>
+                                    </Card.Body>
+                                </Card>
+                            </Col>
+                        ))
+                    )}
+                </Row>
+            )}
         </Container>
     );
 };

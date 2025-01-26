@@ -47,5 +47,24 @@ router.post(
     }
 );
 
+// Admin route to delete a job
+router.delete('/delete-job/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const jobId = req.params.id;
+        const job = await Job.findByPk(jobId);
+
+        if (!job) {
+            return res.status(404).send({ message: 'Job not found' });
+        }
+
+        await job.destroy();  // Delete the job from the database
+        res.status(200).json({ message: 'Job successfully deleted' });
+    } catch (error) {
+        console.error('Error deleting job in admin route:', error);
+        res.status(500).json({ message: 'Error deleting job. Please try again later.' });
+    }
+});
+
+
 
 module.exports = router;

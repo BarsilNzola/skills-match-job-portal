@@ -5,6 +5,7 @@ import { useAuth } from './context/AuthContext';  // Use centralized auth state
 import Home from './pages/Home';
 import AdminPanel from './pages/AdminPanel';
 import JobPage from './pages/JobPage';
+import JobDetail from './components/JobDetail';  // Import JobDetail component
 import ProfilePage from './pages/ProfilePage';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
@@ -38,18 +39,24 @@ const App = () => {
                   <li className="nav-item">
                     <Link className="nav-link" to="/jobs">Jobs</Link>
                   </li>
-                  {user?.role === 'admin' && (
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/admin">Admin Panel</Link>
-                    </li>
+                  {/* Admin link visible only for admins */}
+                  {user ? (
+                      <>
+                          {user.role === 'admin' && (
+                              <li className="nav-item">
+                                  <Link className="nav-link" to="/admin">Admin Panel</Link>
+                              </li>
+                          )}
+                          <li className="nav-item">
+                              <button className="btn btn-link nav-link" onClick={logout}>Logout</button>
+                          </li>
+                      </>
+                  ) : (
+                      <li className="nav-item">
+                          <Link className="nav-link" to="/login">Login</Link>
+                      </li>
                   )}
-                  <li className="nav-item">
-                    {user ? (
-                      <button className="btn btn-link nav-link" onClick={logout}>Logout</button>
-                    ) : (
-                      <Link className="nav-link" to="/login">Login</Link>
-                    )}
-                  </li>
+
                 </ul>
               </div>
             </div>
@@ -60,9 +67,11 @@ const App = () => {
             <Routes>
               <Route path="/" exact element={<Home />} />
               <Route path="/jobs" element={<JobPage />} />
+              <Route path="/jobs/:id" element={<JobDetail />} /> {/* Add the job detail route */}
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/login" element={<LoginForm />} />
               <Route path="/register" element={<RegisterForm />} />
+              {/* Admin Panel Route - Only accessible by admins */}
               <Route
                 path="/admin"
                 element={

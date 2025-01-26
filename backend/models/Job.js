@@ -1,7 +1,11 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Sequelize } = require('sequelize');
 const sequelize = require('../config/db');
 
 const Job = sequelize.define('Job', {
+    image: {
+        type: Sequelize.STRING,
+        allowNull: true,
+    },
     title: {
         type: DataTypes.STRING,
         allowNull: false,

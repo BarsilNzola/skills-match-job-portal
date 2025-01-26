@@ -62,6 +62,9 @@ export const postJobFromImage = async (formData) => {
         .then(response => response.data)
         .catch(handleApiError);
 };
+// Delete a job by ID (Only accessible to admins)
+export const deleteJob = (id) => api.delete(`/admin/delete-job/${id}`).catch(handleApiError);
+
 
 
 // Application-related API functions
