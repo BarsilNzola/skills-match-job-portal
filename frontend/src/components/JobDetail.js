@@ -1,37 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button } from 'react-bootstrap'; // Import Modal from react-bootstrap
+import { Modal, Button } from 'react-bootstrap';
 import { fetchJobDetail, applyForJob } from '../services/api';
-import { useParams } from 'react-router-dom';  // Use for fetching job ID from URL
+import { useParams } from 'react-router-dom';
 
 const JobDetail = () => {
     const [job, setJob] = useState(null);
-    const [showModal, setShowModal] = useState(false); // State to control the modal visibility
-    const { id } = useParams();  // Get the job ID from URL params
+    const [showModal, setShowModal] = useState(false); 
+    const { id } = useParams();  
 
     useEffect(() => {
         const getJobDetail = async () => {
-            const response = await fetchJobDetail(id);
-            setJob(response.data);
+            try {
+                const response = await fetchJobDetail(id);
+                setJob(response.data);
+            } catch (error) {
+                console.error("Error fetching job details:", error);
+            }
         };
-        
-        // Fetch job details when the component mounts
+
         getJobDetail();
     }, [id]);
 
     const handleApply = async () => {
         try {
-            const response = await applyForJob({ job: job.id });
+            const response = await applyForJob({ jobId: job.id });
             console.log('Application Successful', response.data);
+            alert('Application submitted successfully!');
         } catch (error) {
             console.error('Application Failed', error);
+            alert('Failed to apply. Please try again.');
         }
     };
 
-    const handleClose = () => setShowModal(false); // Close the modal
-    const handleShow = () => setShowModal(true); // Open the modal
+    const handleClose = () => setShowModal(false);
+    const handleShow = () => setShowModal(true);
 
     return (
         <div className="container mt-5">
+            {/* View Details Button to Open Modal */}
+            <Button variant="info" onClick={handleShow}>View Details</Button>
+
             {/* Job Details Modal */}
             <Modal show={showModal} onHide={handleClose}>
                 <Modal.Header closeButton>
@@ -40,7 +48,11 @@ const JobDetail = () => {
                 <Modal.Body>
                     {job ? (
                         <>
-                            <img src={job.image} alt={`${job.title} image`} className="img-fluid mb-3" />
+                            <img 
+                                src={job.jobImage ? `http://localhost:5000/uploads/${job.jobImage}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
+                                alt={job.title}
+                                className="img-fluid mb-3"
+                            />
                             <h5>{job.company}</h5>
                             <p><strong>Location:</strong> {job.location}</p>
                             <p><strong>Description:</strong> {job.description}</p>
@@ -52,7 +64,7 @@ const JobDetail = () => {
 
                 <Modal.Footer>
                     <Button variant="secondary" onClick={handleClose}>Close</Button>
-                    <Button variant="primary" onClick={handleApply}>Apply</Button>
+                    <Button variant="primary" onClick={handleApply} disabled={!job}>Apply</Button>
                 </Modal.Footer>
             </Modal>
         </div>

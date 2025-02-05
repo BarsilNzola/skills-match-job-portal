@@ -24,7 +24,7 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             localStorage.removeItem('authToken');
-            window.location.href = '/login';
+            window.location.href = '/login';  // Redirect to login page
         }
         return Promise.reject(error);
     }
@@ -33,11 +33,12 @@ api.interceptors.response.use(
 // Helper function for consistent error handling
 const handleApiError = (error) => {
     const message = error.response?.data?.message || error.message || 'An unknown error occurred';
-    throw new Error(message);
+    return Promise.reject(message);
 };
 
 // User-related API functions
 export const registerUser = (userData) => api.post('/users/register', userData).catch(handleApiError);
+
 export const loginUser = async (userData) => {
     try {
         const response = await api.post('/users/login', userData);
@@ -45,7 +46,7 @@ export const loginUser = async (userData) => {
         localStorage.setItem('authToken', token);  // Store token in localStorage
         return response;  // Return the entire response for further use
     } catch (error) {
-        handleApiError(error);
+        return Promise.reject(handleApiError(error));  // Ensure consistent error handling
     }
 };
 
@@ -56,16 +57,23 @@ export const updateUserSkills = (skillsData) => api.put('/users/skills', skillsD
 export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 export const fetchRecommendedJobs = () => api.get('/jobs/recommend').catch(handleApiError);
+
+// Posting job from image
 export const postJobFromImage = async (formData) => {
-
-    return api.post('api/admin/post-job', formData)  // Don't set Content-Type here
-        .then(response => response.data)
-        .catch(handleApiError);
+    return api.post('api/admin/post-job', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    })
+    .then(response => response.data)
+    .catch(handleApiError);
 };
+
 // Delete a job by ID (Only accessible to admins)
-export const deleteJob = (id) => api.delete(`/admin/delete-job/${id}`).catch(handleApiError);
+export const deleteJob = (id) => api.delete(`/jobs/${id}`).catch(handleApiError);
 
-
+// Edit job
+export const updateJob = (id, jobData) => api.put(`/jobs/${id}`, jobData).catch(handleApiError);
 
 // Application-related API functions
 export const applyForJob = (applicationData) => api.post('/applications', applicationData).catch(handleApiError);

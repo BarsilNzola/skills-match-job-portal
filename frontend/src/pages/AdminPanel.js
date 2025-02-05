@@ -15,7 +15,7 @@ const AdminPanel = () => {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         console.log(file); // Log the selected file object
-        setJobImage(e.target.files[0]);
+        setJobImage(file);
     };
 
     // Handle form data change (title and description)
@@ -32,12 +32,18 @@ const AdminPanel = () => {
         }
 
         const formData = new FormData();
-        formData.append('jobImage', jobImage);
+        formData.append('jobImage', jobImage);  
+
+        console.log([...formData]);  
+        console.log('FormData contents:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
 
         // Log FormData contents to check if the file is appended
         for (let pair of formData.entries()) {
-        console.log(pair[0]+ ': ' + pair[1]);
-    }
+            console.log(pair[0] + ': ' + pair[1]);
+        }
 
         setLoading(true);
         setError(null);
@@ -74,7 +80,7 @@ const AdminPanel = () => {
             <Form onSubmit={handleSubmit}>
                 <Form.Group controlId="formFile" className="mb-3">
                     <Form.Label>Upload Job Image</Form.Label>
-                    <Form.Control type="file" name="jobImage" onChange={handleImageChange} />
+                    <Form.Control type="file" name="jobImage" onChange={handleImageChange} /> {/* Ensure the field name is 'image' */}
                 </Form.Group>
 
                 {ocrFailed && (

@@ -3,20 +3,31 @@ const multer = require('multer');
 const path = require('path');
 const router = express.Router();
 const Job = require('../models/Job');
-const { validateJobData } = require('../utils/Validator'); // Optional validator
+const { validateJobData } = require('../utils/Validator');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { calculateJobRecommendations } = require('../utils/Recommendation');
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Directory for uploaded files
+        const uploadPath = path.join(__dirname, '../uploads/');
+        cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`); // Unique file naming
-    },
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
 });
-const upload = multer({ storage });
+
+const upload = multer({ 
+    storage,
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+            return cb(new Error('Only image files are allowed!'), false);
+        }
+        cb(null, true);
+    }
+});
+
 
 // Default image URL
 const DEFAULT_IMAGE_URL = '/uploads/placeholder-image.jpg';
@@ -26,23 +37,25 @@ router.post(
     '/post-job',
     authMiddleware,
     adminMiddleware,
-    upload.single('image'), // Handle image upload
+    upload.single('jobImage'),
     async (req, res) => {
+        console.log('Received file:', req.file); // Make sure req.file exists
         try {
             console.log('Request body:', req.body);
-            console.log('Uploaded file:', req.file);
+            console.log('Request file:', req.file);
 
             const jobData = {
                 ...req.body,
-                image: req.file ? `/uploads/${req.file.filename}` : DEFAULT_IMAGE_URL,
+                jobImage: req.file ? `/uploads/${req.file.filename}` : DEFAULT_IMAGE_URL,
             };
+
+            console.log('Uploaded file:', req.file);
+            console.log('Job Data:', jobData);
 
             const validationError = validateJobData(jobData);
             if (validationError) {
                 return res.status(400).send({ message: validationError });
             }
-
-            console.log('Job data to be saved:', jobData);
 
             const job = await Job.create(jobData);
             res.status(201).send(job);
@@ -57,7 +70,7 @@ router.post(
 router.get('/', async (req, res) => {
     try {
         const jobs = await Job.findAll({
-            attributes: ['id', 'title', 'company', 'location', 'description', 'image'], // Include image field
+            attributes: ['id', 'title', 'company', 'location', 'description', 'jobImage'],
         });
         res.status(200).send(jobs);
     } catch (error) {
@@ -70,13 +83,12 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const job = await Job.findByPk(req.params.id, {
-            attributes: ['id', 'title', 'company', 'location', 'description', 'image'], // Include image field
+            attributes: ['id', 'title', 'company', 'location', 'description', 'jobImage'],
         });
         if (!job) {
             return res.status(404).send({ message: 'Job not found' });
         }
 
-        // Assign default image if not set
         if (!job.image) {
             job.image = DEFAULT_IMAGE_URL;
         }
@@ -91,9 +103,9 @@ router.get('/:id', async (req, res) => {
 // Recommend jobs for a user
 router.get('/jobs/recommend', authMiddleware, async (req, res) => {
     try {
-        const userSkills = req.user.skills; // Extract user skills from authenticated user
+        const userSkills = req.user.skills;
         const jobs = await Job.findAll({
-            attributes: ['id', 'title', 'company', 'location', 'description', 'image'], // Include image field
+            attributes: ['id', 'title', 'company', 'location', 'description', 'jobImage'],
         });
         const recommendedJobs = calculateJobRecommendations(userSkills, jobs);
         res.status(200).send(recommendedJobs);
@@ -104,7 +116,7 @@ router.get('/jobs/recommend', authMiddleware, async (req, res) => {
 });
 
 // Update a job
-router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
+router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const job = await Job.findByPk(id);
@@ -114,14 +126,13 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
         }
 
         const updatedData = {
-            ...req.body,
+            title: req.body.title,
+            description: req.body.description,
+            location: req.body.location,
+            salary: req.body.salary,
+            company: req.body.company
         };
 
-        if (req.file) {
-            updatedData.image = `/uploads/${req.file.filename}`;
-        }
-
-        // Update the job details
         const updatedJob = await job.update(updatedData);
         res.status(200).send(updatedJob);
     } catch (error) {
@@ -140,7 +151,6 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
             return res.status(404).send({ message: 'Job not found' });
         }
 
-        // Delete the job
         await job.destroy();
         res.status(200).send({ message: 'Job deleted successfully' });
     } catch (error) {
