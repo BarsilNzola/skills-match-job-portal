@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { loginUser } from '../services/api'; // Assuming you have a loginUser function
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; // ✅ Import useAuth
 
 const LoginForm = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const navigate = useNavigate();
+    const { login } = useAuth(); // ✅ Get login function from context
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -15,11 +17,11 @@ const LoginForm = () => {
         try {
             const response = await loginUser({ email, password });
             console.log('Login Successful', response.data);
-            // Redirect to profile page or dashboard
 
-            // On successful login, save the token to localStorage
-            localStorage.setItem('authToken', response.data.token); // Assuming response contains token
+            // ✅ Call login function to update AuthContext immediately
+            login(response.data.token);
 
+            // ✅ Redirect to profile page or dashboard
             navigate('/profile');
         } catch (error) {
             console.error('Login Failed', error);

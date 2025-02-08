@@ -1,26 +1,38 @@
-const { CountVectorizer } = require('simple-statistics');
+const natural = require('natural');
 
-// Helper function to vectorize text
+// Function to convert text into numerical vectors
 function vectorizeText(textArray) {
-    const vectorizer = new CountVectorizer();
-    return vectorizer.fitTransform(textArray);
+    const tfidf = new natural.TfIdf();
+    
+    textArray.forEach(doc => tfidf.addDocument(doc));
+    
+    return textArray.map(doc => {
+        const vector = [];
+        tfidf.listTerms(0).forEach(term => {
+            vector.push(tfidf.tfidf(term.term, doc));
+        });
+        return vector;
+    });
 }
 
-// Helper function to calculate cosine similarity
+// Function to calculate cosine similarity
 function cosineSimilarity(vectors) {
-    const numVectors = vectors.length;
-    const similarityMatrix = Array.from({ length: numVectors }, () =>
-        Array(numVectors).fill(0)
-    );
-
-    for (let i = 0; i < numVectors; i++) {
-        for (let j = 0; j < numVectors; j++) {
-            const dotProduct = vectors[i].reduce((sum, val, index) => sum + val * vectors[j][index], 0);
-            const magnitudeA = Math.sqrt(vectors[i].reduce((sum, val) => sum + val ** 2, 0));
-            const magnitudeB = Math.sqrt(vectors[j].reduce((sum, val) => sum + val ** 2, 0));
-            similarityMatrix[i][j] = dotProduct / (magnitudeA * magnitudeB);
+    function dotProduct(a, b) {
+        return a.reduce((sum, val, i) => sum + val * b[i], 0);
+    }
+    
+    function magnitude(vec) {
+        return Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0));
+    }
+    
+    const similarityMatrix = [];
+    for (let i = 0; i < vectors.length; i++) {
+        similarityMatrix[i] = [];
+        for (let j = 0; j < vectors.length; j++) {
+            similarityMatrix[i][j] = dotProduct(vectors[i], vectors[j]) / (magnitude(vectors[i]) * magnitude(vectors[j]) || 1);
         }
     }
+    
     return similarityMatrix;
 }
 

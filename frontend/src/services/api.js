@@ -56,7 +56,19 @@ export const updateUserSkills = (skillsData) => api.put('/users/skills', skillsD
 // Job-related API functions
 export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
-export const fetchRecommendedJobs = () => api.get('/jobs/recommend').catch(handleApiError);
+export const fetchRecommendedJobs = async () => {
+    try {
+        console.log("Calling /jobs/recommend...");
+        const response = await api.get('/jobs/recommend');
+        console.log("Recommended Jobs:", response.data);
+        return response.data;
+    } catch (error) {
+        console.error("Fetch Recommended Jobs Error:", error.response?.data || error.message);
+        return []; // Return an empty array to avoid breaking the UI
+    }
+};
+
+
 
 // Posting job from image
 export const postJobFromImage = async (formData) => {

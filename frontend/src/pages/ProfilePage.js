@@ -38,22 +38,29 @@ const ProfilePage = () => {
         setLoadingJobs(true); // Start loading
         setError(null); // Reset error state
         try {
-            const jobsResponse = await fetchRecommendedJobs();
-            if (jobsResponse.data && jobsResponse.data.length > 0) {
-                setRecommendedJobs(jobsResponse.data);
+            console.log("Fetching recommended jobs...");  // Log before request
+            
+            const response = await fetchRecommendedJobs();
+            console.log("API Response:", response);  // Log full response
+    
+            if (response && response.length > 0) {
+                setRecommendedJobs(response);
             } else {
+                console.warn("No recommended jobs found.");
                 setRecommendedJobs([]); // Set to empty array if no jobs
             }
         } catch (error) {
-            setError("Error fetching recommended jobs."); // Set error if failed
+            console.error("Error fetching recommended jobs:", error); // Log full error
+            setError("Error fetching recommended jobs.");
         } finally {
             setLoadingJobs(false); // End loading
         }
     };
-
+    
     useEffect(() => {
         if (user) fetchJobs();
     }, [user]);
+    
 
     return (
         <Container className="my-5">

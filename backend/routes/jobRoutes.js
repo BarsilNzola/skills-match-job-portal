@@ -103,17 +103,34 @@ router.get('/:id', async (req, res) => {
 // Recommend jobs for a user
 router.get('/jobs/recommend', authMiddleware, async (req, res) => {
     try {
-        const userSkills = req.user.skills;
-        const jobs = await Job.findAll({
-            attributes: ['id', 'title', 'company', 'location', 'description', 'jobImage'],
-        });
-        const recommendedJobs = calculateJobRecommendations(userSkills, jobs);
-        res.status(200).send(recommendedJobs);
+        const userId = req.user.id; 
+        console.log("Fetching recommendations for user:", userId);
+
+        // Fetch user details
+        const user = await User.findByPk(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const userSkills = user.skills ? user.skills.split(',') : [];
+        console.log("User Skills:", userSkills);
+
+        if (userSkills.length === 0) {
+            return res.status(200).json([]); // No skills = No recommendations
+        }
+
+        // Fetch all jobs
+        const jobs = await Job.findAll();
+        console.log("Total jobs available:", jobs.length);
+
+        // Use cosine similarity to get job recommendations
+        const recommendedJobs = calculateJobRecommendations(userSkills.join(' '), jobs);
+        
+        res.json(recommendedJobs);
     } catch (error) {
-        console.error('Error recommending jobs:', error);
-        res.status(500).send({ message: 'Error recommending jobs. Please try again later.' });
+        console.error("Error recommending jobs:", error);
+        res.status(500).json({ message: "Server error" });
     }
 });
+
 
 // Update a job
 router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
