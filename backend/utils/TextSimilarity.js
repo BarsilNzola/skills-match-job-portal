@@ -4,12 +4,14 @@ const natural = require('natural');
 function vectorizeText(textArray) {
     const tfidf = new natural.TfIdf();
     
+    // Add all documents to TF-IDF
     textArray.forEach(doc => tfidf.addDocument(doc));
-    
-    return textArray.map(doc => {
+
+    // Generate vectors correctly for each document
+    return textArray.map((doc, index) => {
         const vector = [];
-        tfidf.listTerms(0).forEach(term => {
-            vector.push(tfidf.tfidf(term.term, doc));
+        tfidf.listTerms(index).forEach(term => {
+            vector.push(tfidf.tfidf(term.term, index)); // Use `index` instead of `0`
         });
         return vector;
     });

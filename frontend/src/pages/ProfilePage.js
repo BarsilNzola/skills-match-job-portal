@@ -58,8 +58,11 @@ const ProfilePage = () => {
     };
     
     useEffect(() => {
-        if (user) fetchJobs();
-    }, [user]);
+        if (user) {
+            console.log("User Skills:", user.skills); // Log user skills before fetching jobs
+            fetchJobs();
+        }
+    }, [user]);    
     
 
     return (
