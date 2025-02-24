@@ -1,32 +1,24 @@
 .profile-container {
     background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-    background-size: cover; /* Ensures the image covers the entire container */
-    background-attachment: fixed; /* Optional: Makes the background fixed while scrolling */
     color: white;
     font-family: Arial, sans-serif;
     padding: 20px;
     min-height: 100vh;
-    width: 100%; /* Ensures the container takes up the full width */
-    margin: 0; /* Remove default margin */
+    width: 100%;
+    margin: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-/* Override Bootstrap's default Container padding */
-.profile-container .container-fluid {
-    padding-left: 0;
-    padding-right: 0;
-}
-
 .profile-container .row {
     width: 100%;
-    max-width: 1200px; /* Limit the width for better readability */
+    max-width: 1200px;
     margin: 0 auto;
 }
 
 .profile-container .card {
-    background: rgba(255, 255, 255, 0.1); /* Semi-transparent background for cards */
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     border-radius: 10px;
     color: white;
@@ -114,4 +106,15 @@
 .profile-container .modal-body img {
     max-width: 100%;
     border-radius: 10px;
+}
+
+/* Progress Bar */
+.profile-container .progress {
+    background: rgba(255, 255, 255, 0.2);
+    height: 10px;
+    border-radius: 5px;
+}
+
+.profile-container .progress-bar {
+    background: #007bff;
 }

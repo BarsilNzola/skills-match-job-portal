@@ -1,19 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { fetchUserProfile, updateUserProfile, fetchRecommendedJobs } from '../services/api';
-import { Container, Row, Col, Card, Spinner, Button, Form, Alert, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Spinner, Button, Form, Alert, Modal, ProgressBar } from 'react-bootstrap';
 import '../styles/profilePage.css';
 
 const ProfilePage = () => {
-    const [user, setUser] = useState({
-        name: '',
-        email: '',
-        skills: [],
-        profile: {
-            education: '',
-            experience: '',
-            projects: [],
-        },
-    });
+    const [user, setUser] = useState(null);
     const [skills, setSkills] = useState('');
     const [education, setEducation] = useState('');
     const [experience, setExperience] = useState('');
@@ -21,6 +12,7 @@ const ProfilePage = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [recommendedJobs, setRecommendedJobs] = useState([]);
     const [loadingJobs, setLoadingJobs] = useState(true);
+    const [loadingProfile, setLoadingProfile] = useState(true);
     const [error, setError] = useState(null);
 
     // Modal state
@@ -29,6 +21,7 @@ const ProfilePage = () => {
 
     useEffect(() => {
         const getUserProfile = async () => {
+            setLoadingProfile(true);
             try {
                 const response = await fetchUserProfile();
                 setUser({
@@ -42,6 +35,9 @@ const ProfilePage = () => {
                 setProjects(response.data.profile?.projects?.join('\n') || '');
             } catch (error) {
                 console.error("Error fetching user profile:", error);
+                setError("Failed to load profile. Please try again.");
+            } finally {
+                setLoadingProfile(false);
             }
         };
         getUserProfile();
@@ -56,13 +52,11 @@ const ProfilePage = () => {
                 projects: projects.split('\n').map(project => project.trim()),
             };
 
-            // Call the API to update the profile
             const response = await updateUserProfile({
                 skills: updatedSkills,
                 ...updatedProfile,
             });
 
-            // Update local user data
             setUser((prevUser) => ({
                 ...prevUser,
                 skills: updatedSkills,
@@ -71,9 +65,10 @@ const ProfilePage = () => {
                     ...updatedProfile,
                 },
             }));
-            setIsEditing(false); // Exit edit mode
+            setIsEditing(false);
         } catch (error) {
             console.error("Error updating profile:", error);
+            setError("Failed to update profile. Please try again.");
         }
     };
 
@@ -82,14 +77,10 @@ const ProfilePage = () => {
         setError(null);
         try {
             const response = await fetchRecommendedJobs();
-            if (response && response.length > 0) {
-                setRecommendedJobs(response);
-            } else {
-                setRecommendedJobs([]);
-            }
+            setRecommendedJobs(response || []);
         } catch (error) {
             console.error("Error fetching recommended jobs:", error);
-            setError("Error fetching recommended jobs.");
+            setError("Failed to load recommended jobs. Please try again.");
         } finally {
             setLoadingJobs(false);
         }
@@ -101,7 +92,6 @@ const ProfilePage = () => {
         }
     }, [user]);
 
-    // Handle Apply button click
     const handleApplyClick = (job) => {
         setSelectedJob(job);
         setShowModal(true);
@@ -111,7 +101,11 @@ const ProfilePage = () => {
         <Container fluid className="profile-container">
             <h1 className="text-center mb-4">User Profile</h1>
 
-            {user ? (
+            {loadingProfile ? (
+                <div className="d-flex justify-content-center">
+                    <Spinner animation="border" />
+                </div>
+            ) : user ? (
                 <Row>
                     {/* Left Column: Profile Section */}
                     <Col md={6}>
@@ -138,45 +132,45 @@ const ProfilePage = () => {
                                 ) : (
                                     <Form>
                                         <Form.Group className="mb-3">
-                                            <Form.Label>Edit Skills</Form.Label>
+                                            <Form.Label>Skills</Form.Label>
                                             <Form.Control
                                                 type="text"
                                                 value={skills}
                                                 onChange={(e) => setSkills(e.target.value)}
-                                                placeholder="Enter skills separated by commas"
+                                                placeholder="e.g., JavaScript, React, Node.js"
                                             />
                                         </Form.Group>
 
                                         <Form.Group className="mb-3">
-                                            <Form.Label>Edit Education</Form.Label>
+                                            <Form.Label>Education</Form.Label>
                                             <Form.Control
                                                 as="textarea"
                                                 rows={3}
                                                 value={education}
                                                 onChange={(e) => setEducation(e.target.value)}
-                                                placeholder="Enter your education (one per line)"
+                                                placeholder="e.g., Bachelor's in Computer Science"
                                             />
                                         </Form.Group>
 
                                         <Form.Group className="mb-3">
-                                            <Form.Label>Edit Experience</Form.Label>
+                                            <Form.Label>Experience</Form.Label>
                                             <Form.Control
                                                 as="textarea"
                                                 rows={3}
                                                 value={experience}
                                                 onChange={(e) => setExperience(e.target.value)}
-                                                placeholder="Enter your experience"
+                                                placeholder="e.g., 2 years as a Frontend Developer"
                                             />
                                         </Form.Group>
 
                                         <Form.Group className="mb-3">
-                                            <Form.Label>Edit Projects</Form.Label>
+                                            <Form.Label>Projects</Form.Label>
                                             <Form.Control
                                                 as="textarea"
                                                 rows={3}
                                                 value={projects}
                                                 onChange={(e) => setProjects(e.target.value)}
-                                                placeholder="Enter your projects (one per line)"
+                                                placeholder="e.g., Built a job portal using React"
                                             />
                                         </Form.Group>
                                     </Form>
@@ -233,6 +227,7 @@ const ProfilePage = () => {
                                                     <small className="text-muted">
                                                         Match: <strong>{(job.similarity * 100).toFixed(0)}%</strong>
                                                     </small>
+                                                    <ProgressBar now={job.similarity * 100} className="mt-2" />
                                                 </div>
                                                 <Button variant="primary" onClick={() => handleApplyClick(job)}>
                                                     Apply
@@ -246,9 +241,7 @@ const ProfilePage = () => {
                     </Col>
                 </Row>
             ) : (
-                <div className="d-flex justify-content-center">
-                    <Spinner animation="border" />
-                </div>
+                <Alert variant="danger" className="text-center">Failed to load profile. Please try again.</Alert>
             )}
 
             {/* Modal for Job Advert */}
@@ -259,23 +252,25 @@ const ProfilePage = () => {
                 <Modal.Body>
                     {selectedJob && (
                         <>
-                            {selectedJob.image ? (
+                            {selectedJob.image && (
                                 <img
                                     src={`http://localhost:5000/uploads/${selectedJob.image}`}
                                     alt={selectedJob.title}
                                     className="img-fluid mb-3"
                                 />
-                            ) : (
-                                <p><strong>Description:</strong> {selectedJob.description}</p>
                             )}
                             <p><strong>Company:</strong> {selectedJob.company}</p>
                             <p><strong>Location:</strong> {selectedJob.location}</p>
+                            <p><strong>Description:</strong> {selectedJob.description}</p>
                         </>
                     )}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowModal(false)}>
                         Close
+                    </Button>
+                    <Button variant="primary" onClick={() => setShowModal(false)}>
+                        Apply Now
                     </Button>
                 </Modal.Footer>
             </Modal>

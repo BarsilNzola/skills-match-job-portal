@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchJobs, deleteJob, updateJob } from '../services/api';
-import { Container, Row, Col, Card, Button, Modal, Form } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Modal, Form, Spinner, Alert } from 'react-bootstrap';
+import { FaSearch, FaMapMarkerAlt } from 'react-icons/fa'; // Import icons
 import '../styles/jobPage.css';
 
 const JobPage = () => {
@@ -8,6 +9,8 @@ const JobPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [location, setLocation] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // State for job details modal
     const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -27,10 +30,12 @@ const JobPage = () => {
         const getJobs = async () => {
             try {
                 const response = await fetchJobs();
-                console.log('Fetched Jobs:', response.data);
                 setJobs(response.data);
             } catch (error) {
                 console.error('Error fetching jobs:', error);
+                setError('Failed to load jobs. Please try again.');
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -81,8 +86,8 @@ const JobPage = () => {
         try {
             await updateJob(editJobData.id, editJobData);
             setJobs(prevJobs =>
-                prevJobs.map(job => (job.id === editJobData.id ? { ...job, ...editJobData } : job)
-            ));
+                prevJobs.map(job => (job.id === editJobData.id ? { ...job, ...editJobData } : job))
+            );
             setShowEditModal(false);
             alert('Job updated successfully!');
         } catch (error) {
@@ -99,59 +104,75 @@ const JobPage = () => {
         <Container fluid className='jobs-container'>
             <h1 className="my-4 text-center">Job Listings</h1>
 
+            {/* Search and Filter Section */}
             <Row className="mb-4">
-                <Col md={6}>
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Search by skill or title"
-                        value={searchTerm}
-                        onChange={handleSearch}
-                    />
+                <Col md={6} className="mb-3">
+                    <div className="search-input">
+                        <FaSearch className="search-icon" />
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Search by skill or title"
+                            value={searchTerm}
+                            onChange={handleSearch}
+                        />
+                    </div>
                 </Col>
                 <Col md={6}>
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Location"
-                        value={location}
-                        onChange={handleLocationChange}
-                    />
+                    <div className="search-input">
+                        <FaMapMarkerAlt className="search-icon" />
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Location"
+                            value={location}
+                            onChange={handleLocationChange}
+                        />
+                    </div>
                 </Col>
             </Row>
 
-            <Row>
-                {filteredJobs.map(job => (
-                    <Col key={job.id} md={4} className="mb-4">
-                        <Card>
-                            <Card.Img
-                                variant="top"
-                                src={job.jobImage ? `http://localhost:5000/uploads/${job.jobImage}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
-                                alt="Job Advert"
-                                onError={(e) => {
-                                    if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
-                                        e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
-                                    }
-                                }}
-                            />
-                            <Card.Body className="text-center">
-                                <Button variant="info" onClick={() => handleViewDetails(job)}>View Details</Button>
+            {/* Job Listings */}
+            {loading ? (
+                <div className="d-flex justify-content-center">
+                    <Spinner animation="border" />
+                </div>
+            ) : error ? (
+                <Alert variant="danger" className="text-center">{error}</Alert>
+            ) : (
+                <Row>
+                    {filteredJobs.map(job => (
+                        <Col key={job.id} md={4} className="mb-4">
+                            <Card>
+                                <Card.Img
+                                    variant="top"
+                                    src={job.jobImage ? `http://localhost:5000/uploads/${job.jobImage}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
+                                    alt="Job Advert"
+                                    onError={(e) => {
+                                        if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
+                                            e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
+                                        }
+                                    }}
+                                />
+                                <Card.Body className="text-center">
+                                    <Button variant="info" onClick={() => handleViewDetails(job)}>View Details</Button>
 
-                                {isAdmin && (
-                                    <div className="mt-2">
-                                        <Button variant="danger" onClick={() => handleDeleteJob(job.id)}>
-                                            Delete
-                                        </Button>
-                                        <Button variant="primary" className="ml-2" onClick={() => handleEditClick(job)}>
-                                            Edit
-                                        </Button>
-                                    </div>
-                                )}
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                ))}
-            </Row>
+                                    {isAdmin && (
+                                        <div className="mt-2">
+                                            <Button variant="danger" onClick={() => handleDeleteJob(job.id)}>
+                                                Delete
+                                            </Button>
+                                            <Button variant="primary" className="ml-2" onClick={() => handleEditClick(job)}>
+                                                Edit
+                                            </Button>
+                                        </div>
+                                    )}
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    ))}
+                </Row>
+            )}
 
             {/* Job Details Modal */}
             <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)}>
@@ -194,6 +215,9 @@ const JobPage = () => {
                             <Form.Control as="textarea" rows={3} name="description" value={editJobData.description} onChange={handleEditChange} required />
                         </Form.Group>
                         <Button variant="success" type="submit">Save Changes</Button>
+                        <Button variant="secondary" className="ml-2" onClick={() => setShowEditModal(false)}>
+                            Close
+                        </Button>
                     </Form>
                 </Modal.Body>
             </Modal>

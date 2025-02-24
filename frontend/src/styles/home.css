@@ -10,10 +10,46 @@
     text-align: center;
     color: white;
     font-family: Arial, sans-serif;
+    position: relative;
 }
 
 .overlay {
-    background: rgba(0, 0, 0, 0.5);
-    padding: 20px;
-    border-radius: 10px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent black overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Custom button styling */
+.btn-custom {
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.btn-custom:hover {
+    transform: translateY(-2px); /* Slight lift on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow on hover */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .home-container h1 {
+        font-size: 2.5rem; /* Smaller font size for smaller screens */
+    }
+
+    .home-container p {
+        font-size: 1rem; /* Smaller font size for smaller screens */
+    }
+
+    .btn-custom {
+        font-size: 1rem; /* Smaller buttons for smaller screens */
+        padding: 8px 16px;
+    }
 }
