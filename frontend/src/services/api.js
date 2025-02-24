@@ -53,20 +53,29 @@ export const loginUser = async (userData) => {
 export const fetchUserProfile = () => api.get('/users/profile').catch(handleApiError);
 export const updateUserSkills = (skillsData) => api.put('/users/skills', skillsData).catch(handleApiError);
 
-// Job-related API functions
-export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
-export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
+export const updateUserProfile = (profileData) =>
+    api.put('/users/profile', profileData).catch(handleApiError);
+
 export const fetchRecommendedJobs = async () => {
     try {
-        console.log("Calling /jobs/recommend...");
-        const response = await api.get('/jobs/recommend');
+        console.log("Calling /users/recommendations...");
+        const response = await api.get('/users/recommendations', {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            },
+        });
         console.log("Recommended Jobs:", response.data);
         return response.data;
     } catch (error) {
         console.error("Fetch Recommended Jobs Error:", error.response?.data || error.message);
-        return []; // Return an empty array to avoid breaking the UI
+        throw error;
     }
 };
+
+
+// Job-related API functions
+export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
+export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 
 
 

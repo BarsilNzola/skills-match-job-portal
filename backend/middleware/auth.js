@@ -5,6 +5,7 @@ const authMiddleware = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', ''); // Get token from Authorization header
 
     if (!token) {
+        console.log("No token provided");
         return res.status(401).json({ message: 'No token provided. Please log in.' });
     }
 
@@ -17,6 +18,7 @@ const authMiddleware = async (req, res, next) => {
         const user = await User.findByPk(decoded.id); // Get user from the database
 
         if (!user) {
+            console.log("User not found in database");
             return res.status(404).json({ message: 'User not found' });
         }
 

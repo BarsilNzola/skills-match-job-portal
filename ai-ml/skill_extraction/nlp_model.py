@@ -1,36 +1,37 @@
-import sys
-import json
 import nltk
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
+import json
 
-# Ensure necessary NLTK data is downloaded
+# Download necessary resources
 nltk.download('punkt')
+nltk.download('stopwords')
 
-# Function to extract skills dynamically from job descriptions
+stop_words = set(stopwords.words('english'))
+
 def extract_skills(job_descriptions):
-    # Tokenize words from all job descriptions
-    all_words = [word_tokenize(desc.lower()) for desc in job_descriptions if desc]  # Ensure no null descriptions
-    flattened_words = [word for sublist in all_words for word in sublist]  # Flatten list
-
-    # Use CountVectorizer to identify most common words (potential skills)
-    vectorizer = CountVectorizer().fit([" ".join(flattened_words)])  # Convert list back to string
-    skills = vectorizer.get_feature_names_out().tolist()
-
-    return skills
-
-if __name__ == "__main__":
     try:
-        # Read job descriptions from command-line argument
-        job_data = json.loads(sys.argv[1])
+        descriptions = [job.get('description', '') for job in job_descriptions]
 
-        # Extract only 'description' field from jobs
-        job_descriptions = [job.get("description", "") for job in job_data]
+        # Tokenize and filter stopwords
+        all_words = [word_tokenize(desc.lower()) for desc in descriptions]
+        filtered_words = [word for sublist in all_words for word in sublist if word.isalpha() and word not in stop_words]
 
-        extracted_skills = extract_skills(job_descriptions)
+        # Extract most common words (potential skills)
+        vectorizer = CountVectorizer().fit([" ".join(filtered_words)])
+        skills = vectorizer.get_feature_names_out()
 
-        # Output extracted skills as JSON
-        print(json.dumps(extracted_skills))
+        return skills.tolist()
 
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
+        return {"error": f"Skill extraction failed: {str(e)}"}
+
+if __name__ == "__main__":
+    import sys
+    try:
+        job_descriptions = json.loads(sys.argv[1])
+        extracted_skills = extract_skills(job_descriptions)
+        print(json.dumps(extracted_skills))
+    except json.JSONDecodeError as e:
+        print(json.dumps({"error": f"JSON decode error: {str(e)}"}))

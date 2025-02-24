@@ -1,51 +1,53 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const bodyParser = require('body-parser');
+const dotenv = require('dotenv');
+const sequelize = require('./config/db');
+
 const userRoutes = require('./routes/userRoutes');
 const jobRoutes = require('./routes/jobRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
-const adminRoutes = require('./routes/adminRoutes');  // Import the admin routes
-const sequelize = require('./config/db');  // Sequelize import for MySQL
-const bodyParser = require('body-parser');
-const dotenv = require('dotenv');
+const adminRoutes = require('./routes/adminRoutes');
 
-// Initialize environment variables
 dotenv.config();
 
-// Set up express app
 const app = express();
 
-// Middleware
 app.use(express.json());
 app.use(cors({
-    origin: 'http://localhost:3000', // Replace with your frontend URL
+    origin: 'http://localhost:3000',
     credentials: true,
-    allowedHeaders: ['Authorization', 'Content-Type'],  // Ensure 'Authorization' is allowed
+    allowedHeaders: ['Authorization', 'Content-Type'],
 }));
-
 app.use(bodyParser.json());
-
-// Serve static files (images) from 'uploads' folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Define basic routes
 app.use('/users', userRoutes);
 app.use('/jobs', jobRoutes);
 app.use('/applications', applicationRoutes);
-app.use('/api/admin', adminRoutes);  // Register the admin routes
+app.use('/api/admin', adminRoutes);
 app.get('/', (req, res) => {
     res.send('Skill-Match Job Portal API');
 });
 
-// Synchronize Sequelize database 
 sequelize.sync().then(() => {
     console.log('Database synced successfully!');
 }).catch((err) => {
     console.log('Error syncing database:', err);
 });
 
-// Port and server
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+});
+
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Server running on port ${PORT}`);
 });
