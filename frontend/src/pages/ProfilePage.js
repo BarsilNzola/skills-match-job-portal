@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchUserProfile, updateUserProfile, fetchRecommendedJobs } from '../services/api';
-import { Container, Row, Col, Card, Spinner, Button, Form, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Spinner, Button, Form, Alert, Modal } from 'react-bootstrap';
+import '../styles/profilePage.css';
 
 const ProfilePage = () => {
     const [user, setUser] = useState({
@@ -21,6 +22,10 @@ const ProfilePage = () => {
     const [recommendedJobs, setRecommendedJobs] = useState([]);
     const [loadingJobs, setLoadingJobs] = useState(true);
     const [error, setError] = useState(null);
+
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [selectedJob, setSelectedJob] = useState(null);
 
     useEffect(() => {
         const getUserProfile = async () => {
@@ -96,8 +101,14 @@ const ProfilePage = () => {
         }
     }, [user]);
 
+    // Handle Apply button click
+    const handleApplyClick = (job) => {
+        setSelectedJob(job);
+        setShowModal(true);
+    };
+
     return (
-        <Container className="my-5">
+        <Container fluid className="profile-container">
             <h1 className="text-center mb-4">User Profile</h1>
 
             {user ? (
@@ -197,44 +208,40 @@ const ProfilePage = () => {
                                 <Spinner animation="border" />
                             </div>
                         ) : (
-                            <>
+                            <div className="recommended-jobs">
                                 {recommendedJobs.length === 0 ? (
                                     <Alert variant="info" className="w-100 text-center">
                                         No recommendations found. Update your skills or check back later!
                                     </Alert>
                                 ) : (
                                     recommendedJobs.map((job) => (
-                                        <Card key={job.id} className="mb-4 shadow-sm">
+                                        <Card key={job.id} className="job-card mb-4">
                                             <Card.Img
                                                 variant="top"
                                                 src={job.image ? `http://localhost:5000/uploads/${job.image}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
                                                 alt={job.title}
-                                                style={{ height: "200px", objectFit: "cover" }}
                                                 onError={(e) => {
                                                     if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
                                                         e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
                                                     }
                                                 }}
                                             />
-
-                                            <Card.Body className="d-flex flex-column">
-                                                <Card.Title className="mb-3">{job.title}</Card.Title>
-                                                <Card.Text className="flex-grow-1">{job.description}</Card.Text>
-
+                                            <Card.Body>
+                                                <Card.Title>{job.title}</Card.Title>
+                                                <Card.Text>{job.description}</Card.Text>
                                                 <div className="mb-3">
                                                     <small className="text-muted">
                                                         Match: <strong>{(job.similarity * 100).toFixed(0)}%</strong>
                                                     </small>
                                                 </div>
-
-                                                <Button variant="primary" className="mt-auto">
+                                                <Button variant="primary" onClick={() => handleApplyClick(job)}>
                                                     Apply
                                                 </Button>
                                             </Card.Body>
                                         </Card>
                                     ))
                                 )}
-                            </>
+                            </div>
                         )}
                     </Col>
                 </Row>
@@ -243,6 +250,35 @@ const ProfilePage = () => {
                     <Spinner animation="border" />
                 </div>
             )}
+
+            {/* Modal for Job Advert */}
+            <Modal show={showModal} onHide={() => setShowModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{selectedJob?.title}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {selectedJob && (
+                        <>
+                            {selectedJob.image ? (
+                                <img
+                                    src={`http://localhost:5000/uploads/${selectedJob.image}`}
+                                    alt={selectedJob.title}
+                                    className="img-fluid mb-3"
+                                />
+                            ) : (
+                                <p><strong>Description:</strong> {selectedJob.description}</p>
+                            )}
+                            <p><strong>Company:</strong> {selectedJob.company}</p>
+                            <p><strong>Location:</strong> {selectedJob.location}</p>
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowModal(false)}>
+                        Close
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     );
 };

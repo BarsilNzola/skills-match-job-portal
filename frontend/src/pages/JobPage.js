@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { fetchJobs, deleteJob, updateJob } from '../services/api'; // Import updateJob function
+import { fetchJobs, deleteJob, updateJob } from '../services/api';
 import { Container, Row, Col, Card, Button, Modal, Form } from 'react-bootstrap';
+import '../styles/jobPage.css';
 
 const JobPage = () => {
     const [jobs, setJobs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [location, setLocation] = useState('');
-    const [isAdmin, setIsAdmin] = useState(false); // Keep the state
+    const [isAdmin, setIsAdmin] = useState(false);
 
     // State for job details modal
     const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -35,7 +36,7 @@ const JobPage = () => {
 
         getJobs();
         setIsAdmin(true); // Set based on user data or role from API
-    }, []); // Empty dependency array ensures this runs once on mount
+    }, []);
 
     const handleSearch = (event) => setSearchTerm(event.target.value);
     const handleLocationChange = (event) => setLocation(event.target.value);
@@ -80,8 +81,8 @@ const JobPage = () => {
         try {
             await updateJob(editJobData.id, editJobData);
             setJobs(prevJobs =>
-                prevJobs.map(job => (job.id === editJobData.id ? { ...job, ...editJobData } : job))
-            );
+                prevJobs.map(job => (job.id === editJobData.id ? { ...job, ...editJobData } : job)
+            ));
             setShowEditModal(false);
             alert('Job updated successfully!');
         } catch (error) {
@@ -95,7 +96,7 @@ const JobPage = () => {
     );
 
     return (
-        <Container>
+        <Container fluid className='jobs-container'>
             <h1 className="my-4 text-center">Job Listings</h1>
 
             <Row className="mb-4">
@@ -134,7 +135,7 @@ const JobPage = () => {
                                 }}
                             />
                             <Card.Body className="text-center">
-                            <Button variant="info" onClick={() => handleViewDetails(job)}>View Details</Button>
+                                <Button variant="info" onClick={() => handleViewDetails(job)}>View Details</Button>
 
                                 {isAdmin && (
                                     <div className="mt-2">

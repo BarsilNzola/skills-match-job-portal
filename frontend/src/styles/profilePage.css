@@ -1,0 +1,117 @@
+.profile-container {
+    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    background-size: cover; /* Ensures the image covers the entire container */
+    background-attachment: fixed; /* Optional: Makes the background fixed while scrolling */
+    color: white;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    min-height: 100vh;
+    width: 100%; /* Ensures the container takes up the full width */
+    margin: 0; /* Remove default margin */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Override Bootstrap's default Container padding */
+.profile-container .container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.profile-container .row {
+    width: 100%;
+    max-width: 1200px; /* Limit the width for better readability */
+    margin: 0 auto;
+}
+
+.profile-container .card {
+    background: rgba(255, 255, 255, 0.1); /* Semi-transparent background for cards */
+    border: none;
+    border-radius: 10px;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.profile-container .card-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.profile-container .card-text {
+    font-size: 1rem;
+    color: #ddd;
+}
+
+.profile-container .btn {
+    background: #007bff;
+    border: none;
+    margin-top: 10px;
+}
+
+.profile-container .btn:hover {
+    background: #0056b3;
+}
+
+.profile-container .recommended-jobs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.profile-container .job-card {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.profile-container .job-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.profile-container .job-card img {
+    height: 150px;
+    object-fit: cover;
+}
+
+.profile-container .job-card .card-body {
+    padding: 1rem;
+}
+
+.profile-container .job-card .card-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.profile-container .job-card .card-text {
+    font-size: 0.9rem;
+    color: #ddd;
+}
+
+.profile-container .job-card .btn {
+    margin-top: auto;
+}
+
+/* Modal Styles */
+.profile-container .modal-content {
+    background: rgba(15, 32, 39, 0.9);
+    color: white;
+    border: none;
+    border-radius: 10px;
+}
+
+.profile-container .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-container .modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-container .modal-body img {
+    max-width: 100%;
+    border-radius: 10px;
+}

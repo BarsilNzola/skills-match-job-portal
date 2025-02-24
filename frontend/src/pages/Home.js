@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Row, Col, Button } from 'react-bootstrap';
+import '../styles/home.css';
 
 const Home = () => (
-    <div className="home-container" style={{ background: 'url(/path-to-image.jpg) no-repeat center center fixed', backgroundSize: 'cover', minHeight: '100vh' }}>
+    <div fluid className="home-container">
         <Container className="text-center py-5">
             <Row>
                 <Col>

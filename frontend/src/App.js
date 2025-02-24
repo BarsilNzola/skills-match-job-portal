@@ -8,6 +8,7 @@ import JobDetail from './components/JobDetail';
 import ProfilePage from './pages/ProfilePage';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
+import Footer from './components/Footer'; // Import the Footer component
 
 const App = () => {
   return (
@@ -19,7 +20,7 @@ const App = () => {
   );
 };
 
-// ✅ Move everything inside a separate component to ensure AuthProvider is initialized
+// Move everything inside a separate component to ensure AuthProvider is initialized
 const AppContent = () => {
   const { user, logout } = useAuth();
   const [authChanged, setAuthChanged] = useState(false);
@@ -76,7 +77,7 @@ const AppContent = () => {
       </nav>
 
       {/* Routes */}
-      <div className="container mt-4">
+      <div> {/* Remove `mt-4` here */}
         <Routes>
           <Route path="/" exact element={<Home />} />
           <Route path="/jobs" element={<JobPage />} />
@@ -88,6 +89,9 @@ const AppContent = () => {
           <Route path="/admin" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/login" replace />} />
         </Routes>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
