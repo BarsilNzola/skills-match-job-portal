@@ -1,35 +1,97 @@
 const Tesseract = require('tesseract.js');
-const  Job  = require('../models/Job');
+const sharp = require('sharp');
+const path = require('path');
+const fs = require('fs');
+const Job = require('../models/Job');
+const { createWorker } = Tesseract;
 
-function extractTextFromImage(imagePath) {
-    return new Promise((resolve, reject) => {
-        Tesseract.recognize(
-            imagePath, // Path to the image
-            'eng',     // Language (English)
-            { 
-                logger: (m) => console.log(m),
-                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'  // Optional: restrict to certain characters
-             } // Optional: log progress
+async function preprocessImage(imagePath) {
+    try {
+        console.log('Preprocessing image:', imagePath);
 
-        )
-        .then(({ data: { text } }) => resolve(text))
-        .catch((error) => reject(error));
-    });
+        // Check if the image file exists
+        if (!fs.existsSync(imagePath)) {
+            throw new Error(`Image file not found: ${imagePath}`);
+        }
+
+        // Define the output path for the processed image
+        const processedImagePath = path.join(__dirname, '../temp/processed-image.jpg');
+        console.log('Saving processed image to:', processedImagePath);
+
+        // Process the image using sharp
+        await sharp(imagePath)
+            .greyscale() // Convert to grayscale
+            .normalize() // Normalize brightness and contrast
+            .toFile(processedImagePath); // Save the processed image
+
+        console.log('Processed image saved successfully:', processedImagePath);
+        return processedImagePath;
+    } catch (error) {
+        console.error('Error preprocessing image:', error);
+        throw new Error(`Failed to preprocess image: ${error.message}`);
+    }
+}
+
+async function extractTextFromImage(imagePath) {
+    const worker = await createWorker();
+
+    try {
+        await worker.loadLanguage('eng'); // Load English language
+        await worker.initialize('eng'); // Initialize with English
+        await worker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%&*()-_=+[]{};:\'"<>/\\| ', // Allow common characters
+        });
+
+        const { data: { text } } = await worker.recognize(imagePath); // Recognize text
+        await worker.terminate(); // Clean up worker
+
+        return text;
+    } catch (error) {
+        console.error('Error during OCR:', error);
+        await worker.terminate(); // Ensure worker is terminated even if an error occurs
+        throw new Error('Failed to extract text from image.');
+    }
+}
+
+function parseJobText(text) {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0); // Remove empty lines
+
+    // Extract job title, company, and description
+    const title = lines.find(line => line.match(/(Job Title|Position):?/i)) || "Untitled";
+    const company = lines.find(line => line.match(/(Company|Employer):?/i)) || "Unknown Company";
+    const description = lines.slice(2).join(' ') || "No description available.";
+
+    return {
+        title: title.replace(/(Job Title|Position):?/i, '').trim(),
+        company: company.replace(/(Company|Employer):?/i, '').trim(),
+        description,
+    };
 }
 
 async function postJobFromImage(imagePath) {
     try {
-        const extractedText = await extractTextFromImage(imagePath);
+        // Preprocess the image
+        const processedImagePath = await preprocessImage(imagePath);
 
-        if (!extractedText.trim()) {  // Check if text is empty or invalid
+        // Extract text from the processed image
+        const extractedText = await extractTextFromImage(processedImagePath);
+
+        if (!extractedText.trim()) {
             throw new Error("OCR failed to extract job details.");
         }
 
-        const jobDetails = parseJobText(extractedText); // Parse extracted text
+        // Parse extracted text into job details
+        const jobDetails = parseJobText(extractedText);
+
+        // Add the image path to the job details
+        jobDetails.jobImage = `/uploads/${path.basename(imagePath)}`;
 
         // Save job details to the database
         const newJob = await Job.create(jobDetails);
         console.log('Job successfully posted:', newJob);
+
+        // Clean up: Delete the processed image file
+        fs.unlinkSync(processedImagePath);
 
         return newJob;
     } catch (error) {
@@ -37,19 +99,5 @@ async function postJobFromImage(imagePath) {
         throw new Error(error.message); // Pass error to the calling function
     }
 }
-
-function parseJobText(text) {
-    const lines = text.split('\n').map(line => line.trim());
-    const title = lines.find(line => line.match(/(Job Title|Position):?/i)) || "Untitled";
-    const company = lines.find(line => line.match(/(Company):?/i)) || "Unknown Company";
-    const description = lines.slice(2).join(' ') || "No description available.";
-
-    return {
-        title: title.replace(/(Job Title|Position):?/i, '').trim(),
-        company: company.replace(/(Company):?/i, '').trim(),
-        description,
-    };
-}
-
 
 module.exports = { postJobFromImage };

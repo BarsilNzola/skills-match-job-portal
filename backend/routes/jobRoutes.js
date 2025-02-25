@@ -35,18 +35,11 @@ router.post(
     adminMiddleware,
     upload.single('jobImage'),
     async (req, res) => {
-        console.log('Received file:', req.file);
         try {
-            console.log('Request body:', req.body);
-            console.log('Request file:', req.file);
-
             const jobData = {
                 ...req.body,
                 jobImage: req.file ? `/uploads/${req.file.filename}` : DEFAULT_IMAGE_URL,
             };
-
-            console.log('Uploaded file:', req.file);
-            console.log('Job Data:', jobData);
 
             const validationError = validateJobData(jobData);
             if (validationError) {
@@ -54,6 +47,7 @@ router.post(
             }
 
             const job = await Job.create(jobData);
+            console.log('Job successfully posted:', job);
             res.status(201).send(job);
         } catch (error) {
             console.error('Error creating job:', error);

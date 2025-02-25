@@ -212,7 +212,7 @@ const ProfilePage = () => {
                                         <Card key={job.id} className="job-card mb-4">
                                             <Card.Img
                                                 variant="top"
-                                                src={job.image ? `http://localhost:5000/uploads/${job.image}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
+                                                src={job.image ? `http://localhost:5000${job.image}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
                                                 alt={job.title}
                                                 onError={(e) => {
                                                     if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
@@ -254,7 +254,7 @@ const ProfilePage = () => {
                         <>
                             {selectedJob.image && (
                                 <img
-                                    src={`http://localhost:5000/uploads/${selectedJob.image}`}
+                                    src={`http://localhost:5000${selectedJob.image}`}
                                     alt={selectedJob.title}
                                     className="img-fluid mb-3"
                                 />

@@ -144,16 +144,19 @@ const JobPage = () => {
                     {filteredJobs.map(job => (
                         <Col key={job.id} md={4} className="mb-4">
                             <Card>
-                                <Card.Img
-                                    variant="top"
-                                    src={job.jobImage ? `http://localhost:5000/uploads/${job.jobImage}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
-                                    alt="Job Advert"
-                                    onError={(e) => {
-                                        if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
-                                            e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
-                                        }
-                                    }}
-                                />
+                                <div className="card-img-container">
+                                    <Card.Img
+                                        variant="top"
+                                        src={job.jobImage ? `http://localhost:5000${job.jobImage}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
+                                        alt="Job Advert"
+                                        className="card-img-top"
+                                        onError={(e) => {
+                                            if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
+                                                e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
+                                            }
+                                        }}
+                                    />
+                                </div>
                                 <Card.Body className="text-center">
                                     <Button variant="info" onClick={() => handleViewDetails(job)}>View Details</Button>
 
