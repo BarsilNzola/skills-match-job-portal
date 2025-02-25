@@ -1,68 +1,71 @@
 import React, { useState } from 'react';
-import { loginUser } from '../services/api'; // Assuming you have a loginUser function
+import { loginUser } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // ✅ Import useAuth
+import { useAuth } from '../context/AuthContext';
+import { FaEnvelope, FaLock } from 'react-icons/fa'; // Import icons
+import '../styles/loginForm.css'; // Import custom CSS
 
 const LoginForm = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false); // Loading state
     const navigate = useNavigate();
-    const { login } = useAuth(); // ✅ Get login function from context
+    const { login } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Sending login request with data:', { email, password }); // Debug log
-        setError(null); // Reset error state
+        setError(null);
+        setLoading(true); // Set loading state
+
         try {
             const response = await loginUser({ email, password });
-            console.log('Login Successful', response.data);
-
-            // ✅ Call login function to update AuthContext immediately
             login(response.data.token);
-
-            // ✅ Redirect to profile page or dashboard
             navigate('/profile');
         } catch (error) {
             console.error('Login Failed', error);
             setError(error.response?.data?.message || 'Login failed, please try again.');
+        } finally {
+            setLoading(false); // Reset loading state
         }
     };
 
     return (
-        <div className="container mt-5">
-            <div className="row justify-content-center">
-                <div className="col-md-6">
-                    <h2 className="text-center mb-4">Login</h2>
-                    <form onSubmit={handleSubmit} className="card p-4 shadow-sm">
-                        {error && <div className="alert alert-danger">{error}</div>}
-                        <div className="mb-3">
-                            <label htmlFor="email" className="form-label">Email</label>
-                            <input
-                                type="email"
-                                id="email"
-                                className="form-control"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Enter your email"
-                                required
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label htmlFor="password" className="form-label">Password</label>
-                            <input
-                                type="password"
-                                id="password"
-                                className="form-control"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Enter your password"
-                                required
-                            />
-                        </div>
-                        <button type="submit" className="btn btn-primary w-100">Login</button>
-                    </form>
-                </div>
+        <div className="login-container">
+            <div className="login-card">
+                <h2 className="text-center mb-4">Login</h2>
+                <form onSubmit={handleSubmit}>
+                    {error && <div className="alert alert-danger">{error}</div>}
+                    <div className="input-group mb-3">
+                        <span className="input-group-text">
+                            <FaEnvelope />
+                        </span>
+                        <input
+                            type="email"
+                            className="form-control"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter your email"
+                            required
+                        />
+                    </div>
+                    <div className="input-group mb-3">
+                        <span className="input-group-text">
+                            <FaLock />
+                        </span>
+                        <input
+                            type="password"
+                            className="form-control"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            required
+                        />
+                    </div>
+                    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                        {loading ? <div className="spinner-border spinner-border-sm" role="status"></div> : 'Login'}
+                    </button>
+                </form>
             </div>
         </div>
     );
