@@ -22,6 +22,7 @@ async function preprocessImage(imagePath) {
         await sharp(imagePath)
             .greyscale() // Convert to grayscale
             .normalize() // Normalize brightness and contrast
+            .threshold(128) // Apply thresholding
             .toFile(processedImagePath); // Save the processed image
 
         console.log('Processed image saved successfully:', processedImagePath);
@@ -40,6 +41,7 @@ async function extractTextFromImage(imagePath) {
         await worker.initialize('eng'); // Initialize with English
         await worker.setParameters({
             tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%&*()-_=+[]{};:\'"<>/\\| ', // Allow common characters
+            tessedit_pageseg_mode: '6', // Assume a single uniform block of text
         });
 
         const { data: { text } } = await worker.recognize(imagePath); // Recognize text
@@ -82,9 +84,6 @@ async function postJobFromImage(imagePath) {
 
         // Parse extracted text into job details
         const jobDetails = parseJobText(extractedText);
-
-        // Add the image path to the job details
-        jobDetails.jobImage = `/uploads/${path.basename(imagePath)}`;
 
         // Save job details to the database
         const newJob = await Job.create(jobDetails);

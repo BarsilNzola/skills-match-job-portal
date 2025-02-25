@@ -1,28 +1,25 @@
 import React, { useState } from 'react';
-import { postJobFromImage } from '../services/api'; // Import your API function
-import { Button, Form, Alert, Spinner } from 'react-bootstrap';
+import { postJobFromImage } from '../services/api';
+import { Button, Form, Alert, Spinner, Card } from 'react-bootstrap';
+import '../styles/adminPanel.css'; // Import custom CSS
 
 const AdminPanel = () => {
-    const [jobImage, setJobImage] = useState(null); // State to store the image
-    const [title, setTitle] = useState(''); // State for job title
-    const [description, setDescription] = useState(''); // State for job description
-    const [loading, setLoading] = useState(false); // Loading state
-    const [error, setError] = useState(null); // Error state
-    const [success, setSuccess] = useState(null); // Success message
-    const [ocrFailed, setOcrFailed] = useState(false); // OCR failure state
+    const [jobImage, setJobImage] = useState(null);
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(null);
+    const [ocrFailed, setOcrFailed] = useState(false);
 
-    // Handle image file selection
     const handleImageChange = (e) => {
         const file = e.target.files[0];
-        console.log(file); // Log the selected file object
         setJobImage(file);
     };
 
-    // Handle form data change (title and description)
     const handleTitleChange = (e) => setTitle(e.target.value);
     const handleDescriptionChange = (e) => setDescription(e.target.value);
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -32,18 +29,7 @@ const AdminPanel = () => {
         }
 
         const formData = new FormData();
-        formData.append('jobImage', jobImage);  
-
-        console.log([...formData]);  
-        console.log('FormData contents:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key, value);
-        }
-
-        // Log FormData contents to check if the file is appended
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
+        formData.append('jobImage', jobImage);
 
         setLoading(true);
         setError(null);
@@ -51,18 +37,15 @@ const AdminPanel = () => {
         setOcrFailed(false);
 
         try {
-            const response = await postJobFromImage(formData); // Send the formData to API
-            console.log(response);
+            const response = await postJobFromImage(formData);
             setSuccess('Job successfully posted!');
         } catch (err) {
             console.error(err);
 
             if (err.response && err.response.data.message.includes('OCR failed')) {
-                // Handle OCR failure
                 setOcrFailed(true);
                 setError('OCR failed to extract job details. Please fill in manually.');
             } else {
-                // Generic error
                 setError('Failed to post job. Please try again.');
             }
         } finally {
@@ -71,46 +54,56 @@ const AdminPanel = () => {
     };
 
     return (
-        <div className="container my-5">
+        <div className="admin-panel-container">
             <h1 className="text-center mb-4">Admin Panel</h1>
 
-            {success && <Alert variant="success">{success}</Alert>}
-            {error && <Alert variant="danger">{error}</Alert>}
+            <Card className="admin-card">
+                <Card.Body>
+                    {success && <Alert variant="success">{success}</Alert>}
+                    {error && <Alert variant="danger">{error}</Alert>}
 
-            <Form onSubmit={handleSubmit}>
-                <Form.Group controlId="formFile" className="mb-3">
-                    <Form.Label>Upload Job Image</Form.Label>
-                    <Form.Control type="file" name="jobImage" onChange={handleImageChange} /> {/* Ensure the field name is 'image' */}
-                </Form.Group>
-
-                {ocrFailed && (
-                    <>
-                        <Form.Group controlId="formTitle" className="mb-3">
-                            <Form.Label>Job Title</Form.Label>
+                    <Form onSubmit={handleSubmit}>
+                        <Form.Group controlId="formFile" className="mb-3">
+                            <Form.Label>Upload Job Image</Form.Label>
                             <Form.Control 
-                                type="text" 
-                                placeholder="Enter job title" 
-                                value={title} 
-                                onChange={handleTitleChange}
+                                type="file" 
+                                name="jobImage" 
+                                onChange={handleImageChange} 
+                                className="form-control-file"
                             />
                         </Form.Group>
 
-                        <Form.Group controlId="formDescription" className="mb-3">
-                            <Form.Label>Job Description</Form.Label>
-                            <Form.Control 
-                                as="textarea" 
-                                placeholder="Enter job description" 
-                                value={description} 
-                                onChange={handleDescriptionChange} 
-                            />
-                        </Form.Group>
-                    </>
-                )}
+                        {ocrFailed && (
+                            <>
+                                <Form.Group controlId="formTitle" className="mb-3">
+                                    <Form.Label>Job Title</Form.Label>
+                                    <Form.Control 
+                                        type="text" 
+                                        placeholder="Enter job title" 
+                                        value={title} 
+                                        onChange={handleTitleChange}
+                                    />
+                                </Form.Group>
 
-                <Button variant="primary" type="submit" disabled={loading}>
-                    {loading ? <Spinner animation="border" size="sm" /> : 'Post Job'}
-                </Button>
-            </Form>
+                                <Form.Group controlId="formDescription" className="mb-3">
+                                    <Form.Label>Job Description</Form.Label>
+                                    <Form.Control 
+                                        as="textarea" 
+                                        rows={3} 
+                                        placeholder="Enter job description" 
+                                        value={description} 
+                                        onChange={handleDescriptionChange} 
+                                    />
+                                </Form.Group>
+                            </>
+                        )}
+
+                        <Button variant="primary" type="submit" disabled={loading} className="w-100">
+                            {loading ? <Spinner animation="border" size="sm" /> : 'Post Job'}
+                        </Button>
+                    </Form>
+                </Card.Body>
+            </Card>
         </div>
     );
 };
