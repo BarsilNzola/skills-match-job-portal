@@ -4,27 +4,34 @@ const path = require('path');
 const fs = require('fs');
 const Job = require('../models/Job');
 const { createWorker } = Tesseract;
+const cv = require('opencv4nodejs');
 
 async function preprocessImage(imagePath) {
     try {
         console.log('Preprocessing image:', imagePath);
+        if (!fs.existsSync(imagePath)) throw new Error(`Image not found: ${imagePath}`);
 
-        // Check if the image file exists
-        if (!fs.existsSync(imagePath)) {
-            throw new Error(`Image file not found: ${imagePath}`);
-        }
-
-        // Define the output path for the processed image
         const processedImagePath = path.join(__dirname, '../temp/processed-image.jpg');
-        console.log('Saving processed image to:', processedImagePath);
 
-        // Process the image using sharp
+        // Step 1: Convert to grayscale & increase contrast
         await sharp(imagePath)
-            .greyscale() // Convert to grayscale
-            .normalize() // Normalize brightness and contrast
-            .threshold(128) // Apply thresholding
-            .toFile(processedImagePath); // Save the processed image
+            .greyscale()
+            .normalize()
+            .sharpen()
+            .toFile(processedImagePath);
 
+        // Step 2: Read processed image with OpenCV
+        let img = cv.imread(processedImagePath, cv.IMREAD_GRAYSCALE);
+
+        // Step 3: Deskew image (fix tilt)
+        const deskewed = deskewImage(img);
+
+        // Step 4: Apply adaptive thresholding for better OCR
+        const binarized = deskewed.adaptiveThreshold(255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
+
+        // Step 5: Save final cleaned image
+        cv.imwrite(processedImagePath, binarized);
+        
         console.log('Processed image saved successfully:', processedImagePath);
         return processedImagePath;
     } catch (error) {
@@ -33,16 +40,85 @@ async function preprocessImage(imagePath) {
     }
 }
 
+function deskewImage(img) {
+    // Ensure grayscale conversion
+    if (img.channels > 1) {
+        img = img.bgrToGray();
+    }
+
+    // Edge detection
+    const edges = img.canny(50, 200);
+
+    // Detect lines using Hough Transform
+    const lines = edges.houghLinesP(1, Math.PI / 180, 50, 50, 10) || [];
+
+    console.log("🔍 Detected lines:", lines.length);
+
+    if (!Array.isArray(lines) || lines.length === 0) {
+        console.error("❌ No lines detected. Skipping deskew.");
+        return img;
+    }
+
+    let angles = [];
+
+    lines.forEach(line => {
+        try {
+            let x1, y1, x2, y2;
+
+            // Correctly extract coordinates from Vec4 object
+            if (line instanceof cv.Vec4) {
+                x1 = line.x;
+                y1 = line.y;
+                x2 = line.z;
+                y2 = line.w;
+            } else if (Array.isArray(line)) {
+                [x1, y1, x2, y2] = line;
+            } else {
+                throw new Error("Invalid line format");
+            }
+
+            // Compute angle
+            let theta = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+
+            // Ignore nearly vertical/horizontal lines (no deskew needed)
+            if (Math.abs(theta) > 10 && Math.abs(theta) < 80) {
+                angles.push(theta);
+            }
+        } catch (error) {
+            console.error("❌ Error processing line:", line, error.message);
+        }
+    });
+
+    if (angles.length === 0) {
+        console.error("❌ No valid angles for deskewing.");
+        return img;
+    }
+
+    // Use median angle to avoid outliers
+    angles.sort((a, b) => a - b);
+    let medianAngle = angles[Math.floor(angles.length / 2)];
+
+    console.log(`🌀 Rotating image by ${medianAngle.toFixed(2)} degrees`);
+
+    // Rotate image
+    const center = new cv.Point(img.cols / 2, img.rows / 2);
+    const rotationMatrix = cv.getRotationMatrix2D(center, medianAngle, 1);
+    const rotated = img.warpAffine(rotationMatrix, new cv.Size(img.cols, img.rows));
+
+    return rotated;
+}
+
 async function extractTextFromImage(imagePath) {
     const worker = await createWorker();
 
     try {
-        await worker.loadLanguage('eng'); // Load English language
-        await worker.initialize('eng'); // Initialize with English
         await worker.setParameters({
-            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%&*()-_=+[]{};:\'"<>/\\| ', // Allow common characters
-            tessedit_pageseg_mode: '6', // Assume a single uniform block of text
-        });
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%&*()-_=+[]{};:\'"<>/\\| ',
+            tessedit_pageseg_mode: '3', // More adaptable segmentation
+            user_defined_dpi: '300', // Ensures high-resolution text recognition
+            preserve_interword_spaces: '1', // Keeps spacing between words
+            textord_min_xheight: '20' // Ignores very small text (removes noise)
+        });        
 
         const { data: { text } } = await worker.recognize(imagePath); // Recognize text
         await worker.terminate(); // Clean up worker
@@ -55,47 +131,66 @@ async function extractTextFromImage(imagePath) {
     }
 }
 
-function parseJobText(text) {
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0); // Remove empty lines
 
-    // Extract job title, company, and description
-    const title = lines.find(line => line.match(/(Job Title|Position):?/i)) || "Untitled";
-    const company = lines.find(line => line.match(/(Company|Employer):?/i)) || "Unknown Company";
-    const description = lines.slice(2).join(' ') || "No description available.";
+function cleanText(text) {
+    // Remove unwanted characters and clean up the text
+    return text
+        .replace(/[^\w\s.,!?@#$%&*()-_=+[\]{};:'"<>/\\|]/g, '') // Remove special characters
+        .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+        .trim(); // Remove leading and trailing spaces
+}
+
+function parseJobText(text) {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+    // 1️⃣ Detect Capitalized Text as Job Title
+    const title = lines.find(line => /^[A-Z\s]+$/.test(line)) || "Untitled";
+
+    // 2️⃣ Extract First Occurring Email/Website as Company
+    const company = lines.find(line => line.match(/@|www|\.com|Inc|Ltd|Corp/i)) || "Unknown Company";
+
+    // 3️⃣ Use NLP to Extract Meaningful Description
+    const description = extractMeaningfulText(lines.slice(2).join(' '));
 
     return {
-        title: title.replace(/(Job Title|Position):?/i, '').trim(),
-        company: company.replace(/(Company|Employer):?/i, '').trim(),
-        description,
+        title: title.trim(),
+        company: company.replace(/at/i, '').trim(),
+        description: description
     };
+}
+
+// NLP Function to Extract Key Sentences for Job Description
+function extractMeaningfulText(text) {
+    const sentences = text.split('. ');
+    const importantSentences = sentences.filter(sentence => sentence.length > 15); // Ignore short text
+
+    return importantSentences.join('. ').trim();
 }
 
 async function postJobFromImage(imagePath) {
     try {
-        // Preprocess the image
         const processedImagePath = await preprocessImage(imagePath);
-
-        // Extract text from the processed image
         const extractedText = await extractTextFromImage(processedImagePath);
+        if (!extractedText.trim()) throw new Error("OCR failed to extract job details.");
 
-        if (!extractedText.trim()) {
-            throw new Error("OCR failed to extract job details.");
+        const jobDetails = parseJobText(extractedText);
+        jobDetails.jobImage = `/uploads/${path.basename(imagePath)}`;
+
+        // Check if Job Already Exists
+        const existingJob = await Job.findOne({ title: jobDetails.title, company: jobDetails.company });
+        if (existingJob) {
+            console.log('Duplicate job detected:', jobDetails);
+            throw new Error("Job listing already exists.");
         }
 
-        // Parse extracted text into job details
-        const jobDetails = parseJobText(extractedText);
-
-        // Save job details to the database
+        // Save New Job
         const newJob = await Job.create(jobDetails);
         console.log('Job successfully posted:', newJob);
-
-        // Clean up: Delete the processed image file
         fs.unlinkSync(processedImagePath);
-
         return newJob;
     } catch (error) {
         console.error('Error posting job:', error.message);
-        throw new Error(error.message); // Pass error to the calling function
+        throw new Error(error.message);
     }
 }
 
