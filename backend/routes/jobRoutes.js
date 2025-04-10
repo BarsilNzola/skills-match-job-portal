@@ -3,14 +3,14 @@ const multer = require('multer');
 const path = require('path');
 const router = express.Router();
 const Job = require('../models/Job');
+const { postJobFromImage } = require('../utils/jobImageProcessor');
 const User = require('../models/User');
 const { validateJobData } = require('../utils/Validator');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, '../uploads/');
-        cb(null, uploadPath);
+        cb(null, path.join(__dirname, '../uploads'))
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -36,10 +36,20 @@ router.post(
     upload.single('jobImage'),
     async (req, res) => {
         try {
-            const jobData = {
-                ...req.body,
-                jobImage: req.file ? `/uploads/${req.file.filename}` : DEFAULT_IMAGE_URL,
-            };
+            let jobData;
+            if (req.file) {
+                // Process via OCR
+                jobData = await postJobFromImage(req.file.path);
+            } else {
+                // Manual input
+                const { title, description, skills } = req.body;
+                jobData = {
+                    title,
+                    description,
+                    skills: skills || extractSkills(description), // Auto-detect skills if not provided
+                    jobImage: '/uploads/default-job.png'
+                };
+            }
 
             const validationError = validateJobData(jobData);
             if (validationError) {

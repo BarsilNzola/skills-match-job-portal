@@ -1,0 +1,6 @@
+.git*
+.DS_Store
+test.node.js
+.jscs.json
+demo.html
+Gruntfile.js

@@ -81,9 +81,20 @@ export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiErro
 
 // Posting job from image
 export const postJobFromImage = async (formData) => {
-    return api.post('api/admin/post-job', formData, {
+    return api.post('/api/admin/post-job', formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
+        },
+    })
+    .then(response => response.data)
+    .catch(handleApiError);
+};
+
+// Post job via manual input
+export const postJobManual = (jobData) => {
+    return api.post('/api/admin/post-job', jobData, {
+        headers: {
+            'Content-Type': 'application/json',
         },
     })
     .then(response => response.data)
