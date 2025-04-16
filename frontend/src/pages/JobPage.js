@@ -5,10 +5,10 @@ import { FaSearch, FaMapMarkerAlt } from 'react-icons/fa'; // Import icons
 import '../styles/jobPage.css';
 
 const JobPage = () => {
+    const user = JSON.parse(localStorage.getItem('user'));
     const [jobs, setJobs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [location, setLocation] = useState('');
-    const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -40,7 +40,6 @@ const JobPage = () => {
         };
 
         getJobs();
-        setIsAdmin(true); // Set based on user data or role from API
     }, []);
 
     const handleSearch = (event) => setSearchTerm(event.target.value);
@@ -160,13 +159,13 @@ const JobPage = () => {
                                 <Card.Body className="text-center">
                                     <Button variant="info" onClick={() => handleViewDetails(job)}>View Details</Button>
 
-                                    {isAdmin && (
+                                    {user?.role === 'admin' && (
                                         <div className="mt-2">
                                             <Button variant="danger" onClick={() => handleDeleteJob(job.id)}>
-                                                Delete
+                                            Delete
                                             </Button>
                                             <Button variant="primary" className="ml-2" onClick={() => handleEditClick(job)}>
-                                                Edit
+                                            Edit
                                             </Button>
                                         </div>
                                     )}

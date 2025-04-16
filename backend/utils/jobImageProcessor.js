@@ -1,4 +1,4 @@
-const Tesseract = require('tesseract.js');
+const textract = require('textract');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
@@ -6,20 +6,7 @@ const Job = require('../models/Job');
 const { extractSkills } = require('./skills-db');
 const { correctSpelling } = require('./spellChecker');
 
-// Worker instance
-let worker;
-
-async function getWorker() {
-    if (!worker) {
-        worker = await Tesseract.createWorker({
-            logger: m => console.log(m) // Optional logging
-        });
-        await worker.loadLanguage('eng');
-        await worker.initialize('eng');
-    }
-    return worker;
-}
-
+// 1. Image Preprocessing
 async function preprocessImage(imagePath) {
     try {
         console.log('Preprocessing image:', imagePath);
@@ -42,52 +29,83 @@ async function preprocessImage(imagePath) {
     }
 }
 
-async function extractTextFromImage(imagePath) {
-    const worker = await getWorker();
-    
-    try {
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-      
-      // Maintain your important OCR configuration
-      await worker.setParameters({
-        tessedit_pageseg_mode: '6',       // Sparse text layout
-        tessedit_ocr_engine_mode: '2',    // LSTM engine only
-        preserve_interword_spaces: '1',   // Keep original spacing
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%&*()-_=+[]{};:\'"<>/\\| '
-      });
-  
-      const { data: { text } } = await worker.recognize(imagePath);
-      return text;
-      
-    } catch (error) {
-      console.error('OCR processing failed:', error);
-      throw new Error(`Text extraction failed: ${error.message}`);
-    } finally {
-      await worker.terminate().catch(e => console.error('Worker cleanup failed:', e));
-    }
-  }
+// 2. Clean Text
+function cleanText(raw) {
+    return raw
+        .replace(/[^\x20-\x7E\n\r]/g, '') // Remove non-ASCII except newlines
+        .replace(/\s{2,}/g, ' ')          // Collapse multiple spaces
+        .replace(/\n{2,}/g, '\n')         // Collapse multiple line breaks
+        .trim();
+}
 
+// 3. OCR Text Extraction
+async function extractTextFromImage(imagePath) {
+    return new Promise((resolve, reject) => {
+        textract.fromFileWithPath(imagePath, {
+            preserveLineBreaks: true,
+            pdftotextOptions: {
+                layout: 'layout',
+                dpi: 300
+            }
+        }, (error, text) => {
+            if (error) {
+                console.error('OCR failed:', error);
+                reject(new Error(`Text extraction failed: ${error.message}`));
+            } else {
+                console.log(`Processed: ${path.basename(imagePath)}`);
+                resolve(cleanText(text));
+            }
+        });
+    });
+}
+
+// 4. Company Name Extraction
+function extractCompany(lines) {
+    for (let line of lines) {
+        const lower = line.toLowerCase();
+        if (
+            lower.includes('inc') || lower.includes('ltd') ||
+            lower.includes('corp') || lower.includes('company') ||
+            lower.includes('technologies') || lower.includes('solutions')
+        ) {
+            return line.replace(/[^\w\s]/g, '').trim();
+        }
+    }
+
+    const fallback = lines.find(line => /@|www\.|\.com/i.test(line));
+    return fallback ? fallback.replace(/[^\w\s]/g, '').trim() : 'Unknown Company';
+}
+
+// 5. Description Extraction
+function extractDescription(lines) {
+    return lines
+        .slice(2)
+        .filter(line => !line.match(/(www\.|@|\d{3}[-.\s]??\d{3}[-.\s]??\d{4}|email|phone)/i))
+        .join('\n');
+}
+
+// 6. Email Extraction
+function extractEmails(text) {
+    const matches = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/g);
+    return matches ? Array.from(new Set(matches)) : [];
+}
+
+// 7. Process OCR Result
 async function processJobPosting(ocrText) {
     const correctedText = correctSpelling(ocrText);
     const lines = correctedText.split('\n').filter(line => line.trim());
-    
+
     return {
         title: lines[0] || 'Untitled Position',
         company: extractCompany(lines),
         skills: extractSkills(correctedText),
-        description: lines.slice(2).join('\n'),
+        description: extractDescription(lines),
+        emails: extractEmails(correctedText),
         correctedText
     };
 }
 
-function extractCompany(lines) {
-    const companyLine = lines.find(line => 
-        line.match(/@|www\.|\.com|Inc|Ltd|Corp|Company/i)
-    );
-    return companyLine?.replace(/[^\w\s]|at$/gi, '').trim() || "Unknown Company";
-}
-
+// 8. Main Job Posting Logic
 async function postJobFromImage(imagePath) {
     let processedPath;
     try {
@@ -96,17 +114,21 @@ async function postJobFromImage(imagePath) {
         
         if (!rawText.trim()) throw new Error("OCR returned empty text");
 
-        const { title, company, description, skills } = await processJobPosting(rawText);
+        const { title, company, description, skills, emails } = await processJobPosting(rawText);
 
         const jobDetails = {
             title,
             company,
             description,
             skills,
+            emails,
             jobImage: `/uploads/${path.basename(imagePath)}`
         };
 
-        const existingJob = await Job.findOne({ title, company });
+        const existingJob = await Job.findOne({
+            where: { title, company }
+        });
+        
         if (existingJob) throw new Error("Job listing already exists");
 
         return await Job.create(jobDetails);
@@ -114,11 +136,10 @@ async function postJobFromImage(imagePath) {
         if (processedPath && fs.existsSync(processedPath)) {
             fs.unlinkSync(processedPath);
         }
-        // Worker is kept alive for future requests
     }
 }
 
-// Cleanup when process exits
+// 9. Cleanup on Exit
 process.on('exit', async () => {
     if (worker) {
         await worker.terminate();

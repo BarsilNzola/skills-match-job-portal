@@ -18,10 +18,9 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "set BROWSER=none && set DISABLE_OPEN_BROWSER=true && react-scripts --openssl-legacy-provider start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "preinstall": "npm config set ignore-scripts true",
+    "postinstall": "npm config set ignore-scripts false",
+    "start": "set BROWSER=none&&react-scripts --openssl-legacy-provider start"
   },
 
   "eslintConfig": {

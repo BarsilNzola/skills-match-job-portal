@@ -127,7 +127,7 @@ async function calculateJobRecommendations(userId) {
         });
 
         // Define a similarity threshold (e.g., 0.3)
-        const SIMILARITY_THRESHOLD = 0.3;
+        const SIMILARITY_THRESHOLD = 0.1;
 
         // Map jobs with similarity scores and filter by threshold
         const recommendedJobs = jobs

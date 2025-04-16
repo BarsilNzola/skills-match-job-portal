@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext'; // Import AuthProvider and useAuth
 import Home from './pages/Home';
@@ -23,12 +22,7 @@ const App = () => {
 // Move everything inside a separate component to ensure AuthProvider is initialized
 const AppContent = () => {
   const { user, logout } = useAuth();
-  const [authChanged, setAuthChanged] = useState(false);
-
-  useEffect(() => {
-    setAuthChanged((prev) => !prev); // Trigger re-render when `user` changes
-  }, [user]);
-
+  
   return (
     <div>
       {/* Navbar */}

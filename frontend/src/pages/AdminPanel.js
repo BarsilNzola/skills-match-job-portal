@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { postJobFromImage, postJobManual } from '../services/api';
 import { Button, Form, Alert, Spinner, Card } from 'react-bootstrap';
-import { skillsDatabase } from '../utils/skills-db';
-import '../styles/AdminPanel.css';
+import '../styles/adminPanel.css';
 
 // Skill Tags Component
 const SkillTags = ({ skills, isAutoDetected = false }) => (

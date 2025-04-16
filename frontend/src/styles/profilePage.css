@@ -1,5 +1,5 @@
 .profile-container {
-    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    background: linear-gradient(to right, rgba(15, 32, 39, 0.95), rgba(44, 83, 100, 0.95));
     color: white;
     font-family: Arial, sans-serif;
     padding: 20px;
@@ -11,49 +11,78 @@
     align-items: center;
 }
 
+.profile-container label,
+.profile-container .form-label,
+.profile-container p,
+.profile-container .card-title,
+.profile-container .card-text {
+    color: white !important;
+}
+
 .profile-container .row {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.profile-container .col-md-6 {
+    flex: 1;
+    max-width: 48%;
 }
 
 .profile-container .card {
-    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 15px;
+    background-color: rgba(255, 255, 255, 0.1);
     border: none;
-    border-radius: 10px;
     color: white;
-    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
-.profile-container .card-title {
-    font-size: 1.5rem;
-    font-weight: bold;
+.profile-container .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
-.profile-container .card-text {
-    font-size: 1rem;
-    color: #ddd;
+.profile-container .card-body .skills-chip {
+    display: inline-block;
+    background-color: #007bff;
+    color: white;
+    border-radius: 50px;
+    padding: 5px 10px;
+    margin: 3px;
+    font-size: 0.9rem;
 }
 
 .profile-container .btn {
-    background: #007bff;
-    border: none;
-    margin-top: 10px;
+    background-color: #007bff;
+    border-radius: 5px;
+    color: white;
+    padding: 10px 20px;
+    text-transform: uppercase;
 }
 
 .profile-container .btn:hover {
-    background: #0056b3;
+    background-color: #0056b3;
+}
+
+.profile-container .progress-bar {
+    background-color: #007bff;
+    height: 10px;
+    border-radius: 5px;
+    transition: width 0.5s ease;
 }
 
 .profile-container .recommended-jobs {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
 }
 
 .profile-container .job-card {
     background: rgba(255, 255, 255, 0.1);
-    border: none;
     border-radius: 10px;
     overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
@@ -65,42 +94,32 @@
 }
 
 .profile-container .job-card img {
-    height: 150px;
+    height: 200px;
     object-fit: cover;
+    width: 100%;
 }
 
 .profile-container .job-card .card-body {
-    padding: 1rem;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .profile-container .job-card .card-title {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
 .profile-container .job-card .card-text {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #ddd;
 }
 
-.profile-container .job-card .btn {
-    margin-top: auto;
-}
-
-/* Modal Styles */
-.profile-container .modal-content {
-    background: rgba(15, 32, 39, 0.9);
-    color: white;
-    border: none;
-    border-radius: 10px;
-}
-
-.profile-container .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
+.profile-container .modal-header,
 .profile-container .modal-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .profile-container .modal-body img {
@@ -108,13 +127,25 @@
     border-radius: 10px;
 }
 
-/* Progress Bar */
-.profile-container .progress {
-    background: rgba(255, 255, 255, 0.2);
-    height: 10px;
-    border-radius: 5px;
+.project-card {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    border-radius: 10px;
 }
+  
+.project-card .btn {
+    margin-top: 10px;
+    background-color: #28a745;
+    border: none;
+}
+  
+.project-card .btn:hover {
+    background-color: #218838;
+}
+  
 
-.profile-container .progress-bar {
-    background: #007bff;
-}
+
+
+
+
+

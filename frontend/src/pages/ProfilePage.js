@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchUserProfile, updateUserProfile, fetchRecommendedJobs } from '../services/api';
+import { fetchUserProfile, updateUserProfile, updateUserSkills, fetchRecommendedJobs } from '../services/api';
 import { Container, Row, Col, Card, Spinner, Button, Form, Alert, Modal, ProgressBar } from 'react-bootstrap';
 import '../styles/profilePage.css';
 
@@ -51,12 +51,14 @@ const ProfilePage = () => {
                 experience,
                 projects: projects.split('\n').map(project => project.trim()),
             };
-
-            const response = await updateUserProfile({
-                skills: updatedSkills,
-                ...updatedProfile,
-            });
-
+    
+            // 1. Update skills separately
+            await updateUserSkills({ skills: updatedSkills });
+    
+            // 2. Then update profile
+            await updateUserProfile(updatedProfile);
+    
+            // 3. Update local user state
             setUser((prevUser) => ({
                 ...prevUser,
                 skills: updatedSkills,
@@ -65,6 +67,7 @@ const ProfilePage = () => {
                     ...updatedProfile,
                 },
             }));
+    
             setIsEditing(false);
         } catch (error) {
             console.error("Error updating profile:", error);
@@ -117,17 +120,63 @@ const ProfilePage = () => {
                                 {!isEditing ? (
                                     <>
                                         <Card.Text>
-                                            <strong>Skills:</strong> {user.skills.join(', ')}
+                                            <strong>Skills:</strong>
+                                            <div className="skills-container">
+                                                {user.skills.map((skill, index) => (
+                                                <span key={index} className="skills-chip">{skill}</span>
+                                                ))}
+                                            </div>
                                         </Card.Text>
+
+                                        {/* Education Section */}
                                         <Card.Text>
-                                            <strong>Education:</strong> {user.profile.education}
+                                            <strong>Education:</strong>
+                                            <ul style={{ marginBottom: '0.5rem' }}>
+                                                {user.profile.education.split(',').map((edu, index) => (
+                                                <li key={index}>{edu.trim()}</li>
+                                                ))}
+                                            </ul>
                                         </Card.Text>
+
+                                        {/* Experience Section */}
                                         <Card.Text>
-                                            <strong>Experience:</strong> {user.profile.experience}
+                                            <strong>Experience:</strong>
+                                            <ul style={{ marginBottom: 0 }}>
+                                                {user.profile.experience.split(',').map((exp, index) => (
+                                                <li key={index}>{exp.trim()}</li>
+                                                ))}
+                                            </ul>
                                         </Card.Text>
-                                        <Card.Text>
-                                            <strong>Projects:</strong> {user.profile.projects.join(', ')}
-                                        </Card.Text>
+
+                                        <Card className="mb-4">
+                                            <Card.Body>
+                                                <Card.Title>Projects</Card.Title>
+                                                <div className="project-list">
+                                                {user.projects && user.projects.length > 0 ? (
+                                                    user.projects.map((project, index) => (
+                                                    <Card key={index} className="mb-3 project-card">
+                                                        <Card.Body>
+                                                        <Card.Title>{project.title}</Card.Title>
+                                                        <Card.Text>{project.description}</Card.Text>
+                                                        {project.link && (
+                                                            <a
+                                                            href={project.link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="btn btn-primary"
+                                                            >
+                                                            View on GitHub
+                                                            </a>
+                                                        )}
+                                                        </Card.Body>
+                                                    </Card>
+                                                    ))
+                                                ) : (
+                                                    <Card.Text>No projects available.</Card.Text>
+                                                )}
+                                                </div>
+                                            </Card.Body>
+                                        </Card>
                                     </>
                                 ) : (
                                     <Form>
@@ -212,17 +261,20 @@ const ProfilePage = () => {
                                         <Card key={job.id} className="job-card mb-4">
                                             <Card.Img
                                                 variant="top"
-                                                src={job.image ? `http://localhost:5000${job.image}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
-                                                alt={job.title}
+                                                src={
+                                                    job.jobImage
+                                                    ? `http://localhost:5000${job.jobImage}`
+                                                    : `http://localhost:5000/uploads/placeholder-image.jpg`
+                                                }
+                                                alt="Recommended Job"
+                                                className="card-img-top"
                                                 onError={(e) => {
                                                     if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
-                                                        e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
+                                                    e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
                                                     }
                                                 }}
                                             />
                                             <Card.Body>
-                                                <Card.Title>{job.title}</Card.Title>
-                                                <Card.Text>{job.description}</Card.Text>
                                                 <div className="mb-3">
                                                     <small className="text-muted">
                                                         Match: <strong>{(job.similarity * 100).toFixed(0)}%</strong>
@@ -252,9 +304,9 @@ const ProfilePage = () => {
                 <Modal.Body>
                     {selectedJob && (
                         <>
-                            {selectedJob.image && (
+                            {selectedJob.jobImage && (
                                 <img
-                                    src={`http://localhost:5000${selectedJob.image}`}
+                                    src={selectedJob.jobImage ? `http://localhost:5000${selectedJob.jobImage}` : `/uploads/placeholder-image.jpg`}
                                     alt={selectedJob.title}
                                     className="img-fluid mb-3"
                                 />
@@ -268,9 +320,6 @@ const ProfilePage = () => {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowModal(false)}>
                         Close
-                    </Button>
-                    <Button variant="primary" onClick={() => setShowModal(false)}>
-                        Apply Now
                     </Button>
                 </Modal.Footer>
             </Modal>

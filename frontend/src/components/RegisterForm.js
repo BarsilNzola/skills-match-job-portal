@@ -20,7 +20,7 @@ const RegisterForm = () => {
         setLoading(true); // Set loading state
 
         try {
-            const response = await registerUser({ name, email, password });
+            await registerUser({ name, email, password });
             setSuccess('Registration successful! Redirecting to login...');
             setTimeout(() => {
                 navigate('/login');
