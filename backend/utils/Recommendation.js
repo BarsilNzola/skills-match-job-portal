@@ -135,7 +135,10 @@ async function calculateJobRecommendations(userId) {
                 id: job.id,
                 title: job.title,
                 description: job.description,
-                image: job.image ? `http://localhost:5000/uploads/${job.image}` : `http://localhost:5000/uploads/placeholder-image.jpg`,
+                company: job.company,
+                jobImage: job.jobImage
+                    ? `http://localhost:5000${job.jobImage}`
+                    : `http://localhost:5000/uploads/placeholder-image.jpg`,
                 similarity: similarityMap[job.description] || 0
             }))
             .filter(job => job.similarity >= SIMILARITY_THRESHOLD); // Filter by threshold

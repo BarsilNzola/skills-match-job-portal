@@ -7,6 +7,66 @@ const { calculateJobRecommendations } = require('../utils/Recommendation');
 
 
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const libreoffice = require('libreoffice-convert');
+const fs = require('fs');
+const { promisify } = require('util');
+
+// Convert libreoffice.convert to use Promises
+const convertAsync = promisify(libreoffice.convert);
+
+// Configure storage for profile pictures
+const avatarStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/avatars/');
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'avatar-' + req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const uploadAvatar = multer({ 
+    storage: avatarStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+    fileFilter: (req, file, cb) => {
+        const filetypes = /jpeg|jpg|png|gif/;
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = filetypes.test(file.mimetype);
+        
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb('Error: Only image files (jpeg, jpg, png, gif) are allowed!');
+    }
+});
+
+// CV Upload Config (reuses Multer but with different settings)
+const cvStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'uploads/cv/');  // Different folder for CVs
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, 'cv-' + req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+  
+const uploadCV = multer({ 
+    storage: cvStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit (larger for CVs)
+    fileFilter: (req, file, cb) => {
+      const filetypes = /pdf|doc|docx/;  // Only allow CV formats
+      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = filetypes.test(file.mimetype);
+      
+      if (extname && mimetype) {
+        return cb(null, true);
+      }
+      cb('Error: Only PDF/DOC/DOCX files are allowed!');
+    }
+});
 
 // Validation function to check if the user input is correct
 const validateRegistration = (data) => {
@@ -43,6 +103,9 @@ router.post('/register', async (req, res) => {
             password: hashedPassword,
             skills: req.body.skills || [],
             profile: req.body.profile || { experience: '', education: '', projects: [] },
+            profileImage: 'default-avatar.jpg',  // Default avatar
+            cvFile: null,         // No CV initially
+            cvFileType: null      // No CV type initially
         });
 
         // Generate JWT token
@@ -102,12 +165,68 @@ router.get('/profile', authMiddleware, async (req, res) => {
             id: user.id,
             name: user.name,
             email: user.email,
+            profileImage: user.profileImage,
             skills: user.skills || [],
             profile: user.profile || { experience: '', education: '', projects: [] },
+            profileImage: user.profileImage || 'default-avatar.jpg',  
+            cvFile: user.cvFile,     
+            cvFileType: user.cvFileType
         });
     } catch (error) {
         console.error('Error fetching user profile:', error);
         res.status(500).json({ error: 'Internal server error.' });
+    }
+});
+
+router.post('/upload-avatar', authMiddleware, uploadAvatar.single('avatar'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Delete old avatar if it exists and isn't the default
+        if (user.profileImage && user.profileImage !== 'default-avatar.jpg') {
+            const oldAvatarPath = path.join(__dirname, '../uploads/avatars', user.profileImage);
+            if (fs.existsSync(oldAvatarPath)) {
+                fs.unlinkSync(oldAvatarPath);
+            }
+        }
+
+        user.profileImage = req.file.filename;
+        await user.save();
+
+        res.json({ 
+            message: 'Profile picture uploaded successfully',
+            profileImage: req.file.filename
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/avatar/:userId', async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.userId);
+        if (!user || !user.profileImage) {
+            // Return default avatar if none exists
+            const defaultAvatar = path.join(__dirname, '../uploads/avatars/default-avatar.jpg');
+            return res.sendFile(defaultAvatar);
+        }
+
+        const avatarPath = path.join(__dirname, '../uploads/avatars', user.profileImage);
+        if (!fs.existsSync(avatarPath)) {
+            const defaultAvatar = path.join(__dirname, '../uploads/avatars/default-avatar.jpg');
+            return res.sendFile(defaultAvatar);
+        }
+
+        res.sendFile(avatarPath);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -170,7 +289,94 @@ router.put('/skills', authMiddleware , async (req, res) => {
     }
 });
 
+// CV upload route
+router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+  
+    const user = await User.findByPk(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+  
+    // Delete old CV if it exists
+    if (user.cvFile) {
+        const oldCVPath = path.join(__dirname, '../uploads/cv', user.cvFile);
+        if (fs.existsSync(oldCVPath)) {
+          fs.unlinkSync(oldCVPath);
+        }
+    }
+  
+    // Update user with new CV
+    user.cvFile = req.file.filename;
+    user.cvFileType = path.extname(req.file.originalname).slice(1); // "pdf", "docx", etc.
+    await user.save();
+  
+      res.json({ 
+        message: 'CV uploaded successfully',
+        filename: req.file.filename,
+        fileType: user.cvFileType
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+});
 
+router.get('/download-cv', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.id);
+        if (!user || !user.cvFile) {
+            return res.status(404).json({ error: 'CV not found' });
+        }
+
+        const filePath = path.join(__dirname, '../uploads/cv', user.cvFile);
+        res.download(filePath);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/convert-cv', authMiddleware, async (req, res) => {
+    try {
+        const { format } = req.body;
+        const user = await User.findByPk(req.user.id);
+        
+        if (!user || !user.cvFile) {
+            return res.status(404).json({ error: 'CV not found' });
+        }
+
+        const inputPath = path.join(__dirname, '../uploads/cv', user.cvFile);
+        const outputExt = format === 'pdf' ? '.pdf' : '.docx';
+        const outputFilename = `converted-${Date.now()}${outputExt}`;
+        const outputPath = path.join(__dirname, '../uploads/cv', outputFilename);
+
+        // Read the file
+        const file = fs.readFileSync(inputPath);
+        
+        // Convert it (using Promises)
+        const done = await convertAsync(file, outputExt, undefined);
+            
+        // Save the converted file
+        fs.writeFileSync(outputPath, done);
+        
+        // Update user's CV reference
+        user.cvFile = outputFilename;
+        user.cvFileType = format;
+        await user.save();
+        
+        res.json({ 
+            message: 'Conversion successful',
+            filename: outputFilename,
+            fileType: format
+        });
+
+    } catch (error) {
+        console.error('Conversion error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Route: Get recommended jobs for the user
 router.get('/recommendations', authMiddleware, async (req, res) => {

@@ -56,6 +56,92 @@
     font-size: 0.9rem;
 }
 
+/* Profile Header Container */
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+  }
+  
+/* Avatar Container */
+.avatar-container {
+    width: 120px;
+    height: 120px;
+    min-width: 120px;
+    position: relative;
+}
+  
+/* Avatar Image */
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background-color: #f0f2f5;
+}
+  
+/* Profile Text */
+.profile-text {
+    flex: 1;
+}
+  
+/* Profile Text */
+.profile-text h2 {
+    margin: 0;
+    font-size: 1.25rem; /* Reduced from 1.75rem */
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.3;
+}
+  
+.profile-text .email {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.775rem; /* 14px */
+    margin-top: 0.25rem;
+    display: block;
+}
+  
+/* Admin Badge */
+.profile-text .badge {
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+  
+/* Avatar Edit Button */
+.avatar-edit-button {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #0d6efd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: translate(25%, 25%);
+    transition: all 0.2s ease;
+    border: 2px solid #fff;
+}
+  
+.avatar-edit-button:hover {
+    background-color: #0b5ed7;
+    transform: translate(25%, 25%) scale(1.1);
+}
+  
+.avatar-edit-button svg {
+    color: white;
+    font-size: 16px;
+}
+
 .profile-container .btn {
     background-color: #007bff;
     border-radius: 5px;

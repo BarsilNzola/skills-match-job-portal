@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { fetchUserProfile, updateUserProfile, updateUserSkills, fetchRecommendedJobs } from '../services/api';
+import { BiCamera } from 'react-icons/bi';  
+import { fetchUserProfile, uploadAvatar, updateUserProfile, updateUserSkills, uploadCV, convertCV, fetchRecommendedJobs } from '../services/api';
 import { Container, Row, Col, Card, Spinner, Button, Form, Alert, Modal, ProgressBar } from 'react-bootstrap';
 import '../styles/profilePage.css';
 
@@ -28,6 +29,9 @@ const ProfilePage = () => {
                     ...response.data,
                     skills: response.data.skills || [],
                     profile: response.data.profile || { education: '', experience: '', projects: [] },
+                    profileImage: response.data.profileImage || 'default-avatar.jpg',
+                    cvFile: response.data.cvFile || null,
+                    cvFileType: response.data.cvFileType || null
                 });
                 setSkills(response.data.skills?.join(', ') || '');
                 setEducation(response.data.profile?.education || '');
@@ -66,12 +70,31 @@ const ProfilePage = () => {
                     ...prevUser.profile,
                     ...updatedProfile,
                 },
+                // Preserve these fields during profile updates
+                profileImage: prevUser.profileImage,
+                cvFile: prevUser.cvFile,
+                cvFileType: prevUser.cvFileType
             }));
     
             setIsEditing(false);
         } catch (error) {
             console.error("Error updating profile:", error);
             setError("Failed to update profile. Please try again.");
+        }
+    };
+
+    const handleAvatarUpload = async (e) => {
+        if (e.target.files[0]) {
+          const formData = new FormData();
+          formData.append('avatar', e.target.files[0]);
+          
+          try {
+            await uploadAvatar(formData);
+            const response = await fetchUserProfile();
+            setUser(response.data);
+          } catch (error) {
+            setError('Failed to update profile picture');
+          }
         }
     };
 
@@ -102,7 +125,7 @@ const ProfilePage = () => {
 
     return (
         <Container fluid className="profile-container">
-            <h1 className="text-center mb-4">User Profile</h1>
+            <h1 className="text-center mb-4">PROFILE</h1>
 
             {loadingProfile ? (
                 <div className="d-flex justify-content-center">
@@ -114,8 +137,39 @@ const ProfilePage = () => {
                     <Col md={6}>
                         <Card>
                             <Card.Body>
-                                <Card.Title>{user.name}</Card.Title>
-                                <Card.Subtitle className="mb-2 text-muted">{user.email}</Card.Subtitle>
+                                {/* Profile Picture Section */}
+                                <div className="profile-header">
+                                    {/* Avatar Container */}
+                                    <div className="avatar-container">
+                                        <img
+                                        src={user.profileImage ? `http://localhost:5000/users/avatar/${user.id}` : '/default-avatar.jpg'}
+                                        alt="Profile"
+                                        className="avatar-image"
+                                        onError={(e) => {
+                                            e.target.src = '/default-avatar.jpg';
+                                        }}
+                                        />
+                                        <label htmlFor="avatarUpload" className="avatar-edit-button" title="Change profile picture">
+                                        <BiCamera />
+                                        </label>
+                                        <input
+                                        type="file"
+                                        id="avatarUpload"
+                                        accept="image/*"
+                                        style={{ display: 'none' }}
+                                        onChange={handleAvatarUpload}
+                                        />
+                                    </div>
+                                    
+                                    {/* Profile Text */}
+                                    <div className="profile-text">
+                                        <h2>{user.name}</h2>
+                                        <span className="email">{user.email}</span>
+                                        {user.role === 'admin' && (
+                                        <span className="badge bg-danger">Admin</span>
+                                        )}
+                                    </div>
+                                </div>
 
                                 {!isEditing ? (
                                     <>
@@ -127,6 +181,102 @@ const ProfilePage = () => {
                                                 ))}
                                             </div>
                                         </Card.Text>
+
+                                        {/* CV Upload Section */}
+                                        <Card className="mt-4">
+                                            <Card.Body>
+                                                <Card.Title>CV Management</Card.Title>
+                                                
+                                                {user.cvFile ? (
+                                                    <>
+                                                        <p>Current CV: {user.cvFile} ({user.cvFileType.toUpperCase()})</p>
+                                                        <Button 
+                                                            variant="success" 
+                                                            onClick={() => window.open(`http://localhost:5000/users/download-cv`, '_blank')}
+                                                            className="me-2"
+                                                        >
+                                                            Download CV
+                                                        </Button>
+                                                        
+                                                        <Button 
+                                                            variant="primary" 
+                                                            onClick={() => document.getElementById('cvUpload').click()}
+                                                            className="me-2"
+                                                        >
+                                                            Replace CV
+                                                        </Button>
+                                                        
+                                                        {user.cvFileType !== 'pdf' && (
+                                                            <Button 
+                                                                variant="info" 
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await convertCV('pdf');
+                                                                        // Refresh user data
+                                                                        const response = await fetchUserProfile();
+                                                                        setUser(response.data);
+                                                                    } catch (error) {
+                                                                        setError('Conversion failed');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Convert to PDF
+                                                            </Button>
+                                                        )}
+                                                        
+                                                        {user.cvFileType === 'pdf' && (
+                                                            <Button 
+                                                                variant="info" 
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await convertCV('docx');
+                                                                        // Refresh user data
+                                                                        const response = await fetchUserProfile();
+                                                                        setUser(response.data);
+                                                                    } catch (error) {
+                                                                        setError('Conversion failed');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Convert to Word
+                                                            </Button>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <p>No CV uploaded</p>
+                                                        <Button 
+                                                            variant="primary" 
+                                                            onClick={() => document.getElementById('cvUpload').click()}
+                                                        >
+                                                            Upload CV
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                
+                                                <input 
+                                                    type="file" 
+                                                    id="cvUpload" 
+                                                    accept=".pdf,.doc,.docx" 
+                                                    style={{ display: 'none' }}
+                                                    onChange={async (e) => {
+                                                        if (e.target.files[0]) {
+                                                            const formData = new FormData();
+                                                            formData.append('cv', e.target.files[0]);
+                                                            
+                                                            try {
+                                                                await uploadCV(formData);
+                                                                // Refresh user data
+                                                                const response = await fetchUserProfile();
+                                                                setUser(response.data);
+                                                            } catch (error) {
+                                                                setError('Upload failed');
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            </Card.Body>
+                                        </Card>
 
                                         {/* Education Section */}
                                         <Card.Text>
@@ -263,8 +413,10 @@ const ProfilePage = () => {
                                                 variant="top"
                                                 src={
                                                     job.jobImage
-                                                    ? `http://localhost:5000${job.jobImage}`
-                                                    : `http://localhost:5000/uploads/placeholder-image.jpg`
+                                                      ? job.jobImage.startsWith('http')
+                                                        ? job.jobImage
+                                                        : `http://localhost:5000${job.jobImage}`
+                                                      : 'http://localhost:5000/uploads/placeholder-image.jpg'
                                                 }
                                                 alt="Recommended Job"
                                                 className="card-img-top"
@@ -297,26 +449,26 @@ const ProfilePage = () => {
             )}
 
             {/* Modal for Job Advert */}
-            <Modal show={showModal} onHide={() => setShowModal(false)}>
+            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
                 <Modal.Header closeButton>
                     <Modal.Title>{selectedJob?.title}</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="text-center">
                     {selectedJob && (
                         <>
-                            {selectedJob.jobImage && (
-                                <img
-                                    src={selectedJob.jobImage ? `http://localhost:5000${selectedJob.jobImage}` : `/uploads/placeholder-image.jpg`}
-                                    alt={selectedJob.title}
-                                    className="img-fluid mb-3"
-                                />
-                            )}
-                            <p><strong>Company:</strong> {selectedJob.company}</p>
-                            <p><strong>Location:</strong> {selectedJob.location}</p>
-                            <p><strong>Description:</strong> {selectedJob.description}</p>
+                        <img
+                            src={selectedJob.jobImage}
+                            alt={selectedJob.title}
+                            className="img-fluid mb-3"
+                            style={{ maxHeight: '700px', objectFit: 'contain' }}
+                            onError={(e) => {
+                            e.target.src = 'http://localhost:5000/uploads/placeholder-image.jpg';
+                            }}
+                        />
                         </>
                     )}
                 </Modal.Body>
+
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowModal(false)}>
                         Close

@@ -53,8 +53,33 @@ export const loginUser = async (userData) => {
 export const fetchUserProfile = () => api.get('/users/profile').catch(handleApiError);
 export const updateUserSkills = (skillsData) => api.put('/users/skills', skillsData).catch(handleApiError);
 
+export const uploadAvatar = (formData) => {
+    return api.post('/users/upload-avatar', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+};
+
+export const getAvatarUrl = (userId) => 
+    `http://localhost:5000/users/avatar/${userId}`;
+
+
 export const updateUserProfile = (profileData) =>
     api.put('/users/profile', profileData).catch(handleApiError);
+
+export const uploadCV = (formData) => {
+    return api.post('/users/upload-cv', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+};
+
+export const downloadCV = () => api.get('/users/download-cv');
+
+export const convertCV = (targetFormat) => 
+    api.post('/users/convert-cv', { format: targetFormat });
 
 export const fetchRecommendedJobs = async () => {
     try {

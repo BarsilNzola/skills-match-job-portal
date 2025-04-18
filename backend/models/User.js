@@ -16,6 +16,11 @@ const User = sequelize.define('User', {
             isEmail: true, // Ensures the email format is valid
         },
     },
+    profileImage: {
+        type: DataTypes.STRING, // stores filename/path
+        allowNull: true,
+        defaultValue: 'default-avatar.jpg' // optional default image
+    },
     password: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -34,6 +39,14 @@ const User = sequelize.define('User', {
     profile: {
         type: DataTypes.JSON,
         defaultValue: { experience: '', education: '', projects: [] }, // Default profile structure
+    },
+    cvFile: {
+        type: DataTypes.STRING, // stores filename/path
+        allowNull: true
+    },
+    cvFileType: {
+        type: DataTypes.ENUM('pdf', 'doc', 'docx'),
+        allowNull: true
     },
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt
