@@ -76,7 +76,9 @@ export const uploadCV = (formData) => {
     });
 };
 
-export const downloadCV = () => api.get('/users/download-cv');
+export const downloadCV = () => api.get('/users/download-cv', { 
+    responseType: 'blob' // Important for file downloads
+});
 
 export const convertCV = (targetFormat) => 
     api.post('/users/convert-cv', { format: targetFormat });

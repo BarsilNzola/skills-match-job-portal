@@ -4,17 +4,21 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User'); // Ensure this is the correct path to your User model
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');  // Adjust the path if necessary
 const { calculateJobRecommendations } = require('../utils/Recommendation');
+const { convertPdfToDocx, convertDocxToPdf } = require('../utils/conversionUtils');
 
 
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const libreoffice = require('libreoffice-convert');
 const fs = require('fs');
-const { promisify } = require('util');
+const rateLimit = require('express-rate-limit');
 
-// Convert libreoffice.convert to use Promises
-const convertAsync = promisify(libreoffice.convert);
+const downloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 downloads per windowMs
+  message: 'Too many download requests, please try again later'
+});
+
 
 // Configure storage for profile pictures
 const avatarStorage = multer.diskStorage({
@@ -324,7 +328,7 @@ router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res
     }
 });
 
-router.get('/download-cv', authMiddleware, async (req, res) => {
+router.get('/download-cv', downloadLimiter, authMiddleware, async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id);
         if (!user || !user.cvFile) {
@@ -332,49 +336,93 @@ router.get('/download-cv', authMiddleware, async (req, res) => {
         }
 
         const filePath = path.join(__dirname, '../uploads/cv', user.cvFile);
-        res.download(filePath);
+        
+        // Add security headers and proper file handling
+        res.setHeader('Content-Disposition', `attachment; filename="${user.cvFile}"`);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        
+        // Set correct Content-Type based on file extension
+        const fileExt = path.extname(user.cvFile).toLowerCase();
+        const mimeType = fileExt === '.pdf' 
+            ? 'application/pdf' 
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        res.setHeader('Content-Type', mimeType);
+
+        // Stream the file
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+        
+        fileStream.on('error', (err) => {
+            console.error('File stream error:', err);
+            res.status(500).end();
+        });
+        
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Download error:', error);
+        res.status(500).json({ 
+            error: 'Download failed',
+            details: error.message 
+        });
     }
 });
 
 router.post('/convert-cv', authMiddleware, async (req, res) => {
+    const { format } = req.body;
+    const user = await User.findByPk(req.user.id);
+
+    if (!user?.cvFile) {
+        return res.status(404).json({ error: 'CV not found' });
+    }
+
+    const inputPath = path.join(__dirname, '../uploads/cv', user.cvFile);
+    const outputFilename = `converted-${Date.now()}.${format}`;
+    const outputPath = path.join(__dirname, '../uploads/cv', outputFilename);
+
     try {
-        const { format } = req.body;
-        const user = await User.findByPk(req.user.id);
+        const inputExt = path.extname(inputPath).toLowerCase();
         
-        if (!user || !user.cvFile) {
-            return res.status(404).json({ error: 'CV not found' });
+        // Validate supported conversion
+        if (!(
+            (inputExt === '.pdf' && format === 'docx') ||
+            (inputExt === '.docx' && format === 'pdf')
+        )) {
+            return res.status(400).json({ error: 'Unsupported conversion' });
         }
 
-        const inputPath = path.join(__dirname, '../uploads/cv', user.cvFile);
-        const outputExt = format === 'pdf' ? '.pdf' : '.docx';
-        const outputFilename = `converted-${Date.now()}${outputExt}`;
-        const outputPath = path.join(__dirname, '../uploads/cv', outputFilename);
+        // Perform conversion
+        if (inputExt === '.pdf') {
+            await convertPdfToDocx(inputPath, outputPath);
+        } else {
+            await convertDocxToPdf(inputPath, outputPath);
+        }
 
-        // Read the file
-        const file = fs.readFileSync(inputPath);
-        
-        // Convert it (using Promises)
-        const done = await convertAsync(file, outputExt, undefined);
-            
-        // Save the converted file
-        fs.writeFileSync(outputPath, done);
-        
-        // Update user's CV reference
+        // Update user record
         user.cvFile = outputFilename;
         user.cvFileType = format;
         await user.save();
-        
+
+        // Return success with auto-download instructions
         res.json({ 
+            success: true,
             message: 'Conversion successful',
             filename: outputFilename,
-            fileType: format
+            downloadUrl: `/download-cv/${outputFilename}`,
+            autoDownload: true // Frontend can use this flag
         });
 
     } catch (error) {
         console.error('Conversion error:', error);
-        res.status(500).json({ error: error.message });
+        
+        // Clean up failed conversion output if it exists
+        if (fs.existsSync(outputPath)) {
+            fs.unlinkSync(outputPath);
+        }
+        
+        res.status(500).json({ 
+            error: 'Conversion failed',
+            details: error.message,
+            suggestion: 'Please try again or contact support'
+        });
     }
 });
 

@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { BiCamera } from 'react-icons/bi';  
-import { fetchUserProfile, uploadAvatar, updateUserProfile, updateUserSkills, uploadCV, convertCV, fetchRecommendedJobs } from '../services/api';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { fetchUserProfile, uploadAvatar, updateUserProfile, updateUserSkills, uploadCV, convertCV, downloadCV, fetchRecommendedJobs } from '../services/api';
 import { Container, Row, Col, Card, Spinner, Button, Form, Alert, Modal, ProgressBar } from 'react-bootstrap';
 import '../styles/profilePage.css';
 
 const ProfilePage = () => {
     const [user, setUser] = useState(null);
     const [skills, setSkills] = useState('');
+    const [convertingToPdf, setConvertingToPdf] = useState(false);
+    const [convertingToDocx, setConvertingToDocx] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [education, setEducation] = useState('');
     const [experience, setExperience] = useState('');
     const [projects, setProjects] = useState('');
@@ -84,19 +89,27 @@ const ProfilePage = () => {
     };
 
     const handleAvatarUpload = async (e) => {
-        if (e.target.files[0]) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
           const formData = new FormData();
-          formData.append('avatar', e.target.files[0]);
+          formData.append('avatar', file);
           
-          try {
-            await uploadAvatar(formData);
-            const response = await fetchUserProfile();
-            setUser(response.data);
-          } catch (error) {
-            setError('Failed to update profile picture');
-          }
+          const response = await uploadAvatar(formData);
+          console.log('Upload response:', response.data);
+          
+          // Force refresh by fetching updated profile
+          const profileResponse = await fetchUserProfile();
+          setUser(profileResponse.data);
+          
+        } catch (error) {
+          console.error('Upload failed:', error);
+          setError('Failed to upload image. Please try again.');
+        } finally {
+          e.target.value = ''; // Reset input
         }
-    };
+      };
 
     const fetchJobs = async () => {
         setLoadingJobs(true);
@@ -190,56 +203,175 @@ const ProfilePage = () => {
                                                 {user.cvFile ? (
                                                     <>
                                                         <p>Current CV: {user.cvFile} ({user.cvFileType.toUpperCase()})</p>
-                                                        <Button 
-                                                            variant="success" 
-                                                            onClick={() => window.open(`http://localhost:5000/users/download-cv`, '_blank')}
-                                                            className="me-2"
-                                                        >
-                                                            Download CV
-                                                        </Button>
-                                                        
-                                                        <Button 
-                                                            variant="primary" 
-                                                            onClick={() => document.getElementById('cvUpload').click()}
-                                                            className="me-2"
-                                                        >
-                                                            Replace CV
-                                                        </Button>
-                                                        
-                                                        {user.cvFileType !== 'pdf' && (
+                                                        <div className="d-flex flex-wrap gap-2 mb-3">
+                                                            {/* Download Button */}
                                                             <Button 
-                                                                variant="info" 
+                                                                variant="success" 
                                                                 onClick={async () => {
                                                                     try {
-                                                                        await convertCV('pdf');
-                                                                        // Refresh user data
-                                                                        const response = await fetchUserProfile();
-                                                                        setUser(response.data);
+                                                                        const response = await downloadCV();
+                                                                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                                                                        const link = document.createElement('a');
+                                                                        link.href = url;
+                                                                        link.setAttribute('download', user.cvFile);
+                                                                        document.body.appendChild(link);
+                                                                        link.click();
+                                                                        document.body.removeChild(link);
                                                                     } catch (error) {
-                                                                        setError('Conversion failed');
+                                                                        setError('Download failed');
                                                                     }
                                                                 }}
                                                             >
-                                                                Convert to PDF
+                                                                Download CV
                                                             </Button>
+                                                            
+                                                            {/* Replace CV Button */}
+                                                            <Button 
+                                                                variant="primary" 
+                                                                onClick={() => document.getElementById('cvUpload').click()}
+                                                            >
+                                                                Replace CV
+                                                            </Button>
+                                                            
+                                                            {user.cvFileType !== 'pdf' && (
+                                                                <Button 
+                                                                    variant="info" 
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            setConvertingToPdf(true);
+                                                                            setError(null);
+                                                                            // Step 1: Convert
+                                                                            const conversionResponse = await convertCV('pdf');
+                                                                            
+                                                                            if (!conversionResponse.data?.success) {
+                                                                                throw new Error(conversionResponse.data?.message || 'Conversion failed');
+                                                                            }
+
+                                                                            // Step 2: Download
+                                                                            try {
+                                                                                const downloadResponse = await downloadCV();
+                                                                                const blob = new Blob([downloadResponse.data], {
+                                                                                    type: downloadResponse.headers['content-type']
+                                                                                });
+                                                                                const url = window.URL.createObjectURL(blob);
+                                                                                const link = document.createElement('a');
+                                                                                link.href = url;
+                                                                                link.download = `converted-${Date.now()}.pdf`;
+                                                                                document.body.appendChild(link);
+                                                                                link.click();
+                                                                                document.body.removeChild(link);
+                                                                                
+                                                                                // Step 3: Refresh
+                                                                                const profileResponse = await fetchUserProfile();
+                                                                                setUser(profileResponse.data);
+                                                                                
+                                                                                toast.success('File converted and downloaded!');
+                                                                            } catch (downloadError) {
+                                                                                toast.warning('Converted but download failed');
+                                                                                console.error('Download error:', downloadError);
+                                                                            }
+                                                                        } catch (error) {
+                                                                            setError(error.message);
+                                                                            toast.error(error.message);
+                                                                        } finally {
+                                                                            setConvertingToPdf(false);
+                                                                        }
+                                                                    }}
+                                                                    disabled={convertingToPdf}
+                                                                >
+                                                                    {convertingToPdf ? (
+                                                                        <>
+                                                                            <Spinner 
+                                                                                as="span"
+                                                                                animation="border"
+                                                                                size="sm"
+                                                                                role="status"
+                                                                                aria-hidden="true"
+                                                                                className="me-2"
+                                                                            />
+                                                                            Converting...
+                                                                        </>
+                                                                    ) : (
+                                                                        'Convert to PDF'
+                                                                    )}
+                                                                </Button>
+                                                            )}
+                                                            
+                                                            {user.cvFileType === 'pdf' && (
+                                                                <Button 
+                                                                    variant="info" 
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            setConvertingToDocx(true);
+                                                                            setError(null);
+                                                                            const { data } = await convertCV('docx');
+                                                                            
+                                                                            if (data.success) {
+                                                                                const response = await downloadCV();
+                                                                                const url = window.URL.createObjectURL(new Blob([response.data]));
+                                                                                const link = document.createElement('a');
+                                                                                link.href = url;
+                                                                                link.setAttribute('download', `converted-${Date.now()}.docx`);
+                                                                                document.body.appendChild(link);
+                                                                                link.click();
+                                                                                document.body.removeChild(link);
+                                                                                
+                                                                                const profileResponse = await fetchUserProfile();
+                                                                                setUser(profileResponse.data);
+                                                                            }
+                                                                        } catch (error) {
+                                                                            setError('Conversion failed');
+                                                                        } finally {
+                                                                            setConvertingToDocx(false);
+                                                                        }
+                                                                    }}
+                                                                    disabled={convertingToDocx}
+                                                                >
+                                                                    {convertingToDocx ? (
+                                                                        <>
+                                                                            <Spinner 
+                                                                                as="span"
+                                                                                animation="border"
+                                                                                size="sm"
+                                                                                role="status"
+                                                                                aria-hidden="true"
+                                                                                className="me-2"
+                                                                            />
+                                                                            Converting...
+                                                                        </>
+                                                                    ) : (
+                                                                        'Convert to Word'
+                                                                    )}
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        {(convertingToPdf || convertingToDocx) && (
+                                                            <div className="mt-2 text-muted">
+                                                                <small>
+                                                                    {convertingToPdf ? "Converting to PDF..." : "Converting to Word..."}
+                                                                    <br />
+                                                                    This may take a few moments...
+                                                                </small>
+                                                            </div>
                                                         )}
                                                         
-                                                        {user.cvFileType === 'pdf' && (
-                                                            <Button 
-                                                                variant="info" 
-                                                                onClick={async () => {
-                                                                    try {
-                                                                        await convertCV('docx');
-                                                                        // Refresh user data
-                                                                        const response = await fetchUserProfile();
-                                                                        setUser(response.data);
-                                                                    } catch (error) {
-                                                                        setError('Conversion failed');
-                                                                    }
-                                                                }}
-                                                            >
-                                                                Convert to Word
-                                                            </Button>
+                                                        {error && (
+                                                            <Alert variant="danger" className="mt-2">
+                                                                {error.includes('failed') ? (
+                                                                    <>
+                                                                        <strong>Conversion Error:</strong> {error}
+                                                                        <div className="mt-2">
+                                                                            <Button 
+                                                                                variant="outline-danger" 
+                                                                                size="sm"
+                                                                                onClick={() => setError(null)}
+                                                                            >
+                                                                                Dismiss
+                                                                            </Button>
+                                                                        </div>
+                                                                    </>
+                                                                ) : error}
+                                                            </Alert>
                                                         )}
                                                     </>
                                                 ) : (
@@ -265,7 +397,15 @@ const ProfilePage = () => {
                                                             formData.append('cv', e.target.files[0]);
                                                             
                                                             try {
-                                                                await uploadCV(formData);
+                                                                setError(null);
+                                                                await uploadCV(formData, {
+                                                                    onUploadProgress: (progressEvent) => {
+                                                                        const percentCompleted = Math.round(
+                                                                            (progressEvent.loaded * 100) / progressEvent.total
+                                                                        );
+                                                                        setUploadProgress(percentCompleted);
+                                                                    }
+                                                                });
                                                                 // Refresh user data
                                                                 const response = await fetchUserProfile();
                                                                 setUser(response.data);
