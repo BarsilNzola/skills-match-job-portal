@@ -20,6 +20,7 @@
   "scripts": {
     "preinstall": "npm config set ignore-scripts true",
     "postinstall": "npm config set ignore-scripts false",
+    "build": "react-scripts build",
     "start": "set BROWSER=none&&react-scripts --openssl-legacy-provider start"
   },
 
