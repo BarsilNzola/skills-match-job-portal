@@ -1,94 +1,221 @@
-/* JobPage.css */
+/* JobPage.css - Dark Theme Update */
 .jobs-container {
-    background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-    color: black;
-    font-family: Arial, sans-serif;
-    padding: 20px;
+    background: linear-gradient(to right, rgba(15, 32, 39, 0.95), rgba(44, 83, 100, 0.95));
+    color: white;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    padding: 2rem;
     min-height: 100vh;
     width: 100%;
     margin: 0;
 }
 
+/* Search Section Styling */
 .search-input {
     position: relative;
+    margin-bottom: 1rem;
 }
 
 .search-input .search-icon {
     position: absolute;
-    left: 10px;
+    left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #888;
+    color: rgba(255, 255, 255, 0.7);
+    z-index: 2;
 }
 
 .search-input .form-control {
-    padding-left: 35px;
+    padding-left: 2.5rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
 }
 
+.search-input .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.search-input .form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    color: white;
+}
+
+/* Card Styling */
 .card {
     border: none;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-    height: 100%; /* Ensure the card takes up the full height of its container */
+    border-radius: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    will-change: transform;
 }
 
 .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    transform: translateY(-0.5rem);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 .card-img-container {
-    height: 200px; /* Set a fixed height for the image container */
+    height: 12.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #f8f9fa; /* Add a background color to fill empty space */
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    overflow: hidden; /* Ensure the image doesn't overflow the container */
+    background-color: rgba(0, 0, 0, 0.2);
+    overflow: hidden;
 }
 
 .card-img-top {
-    width: 100%; /* Ensure the image fills the container width */
-    height: 100%; /* Ensure the image fills the container height */
-    object-fit: contain; /* Ensure the entire image is visible without cropping */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.card:hover .card-img-top {
+    transform: scale(1.03);
 }
 
 .card-body {
-    padding: 1rem;
-    flex-grow: 1; /* Ensure the card body takes up the remaining space */
+    padding: 1.25rem;
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Space out the content and button */
+    justify-content: space-between;
 }
 
 .card-title {
     font-size: 1.25rem;
-    font-weight: bold;
+    font-weight: 600;
     margin-bottom: 0.75rem;
+    color: white;
 }
 
 .card-text {
     font-size: 0.9rem;
-    color: #555;
+    color: rgba(255, 255, 255, 0.8);
 }
 
+/* Button Styling */
 .btn {
-    margin-top: 10px;
+    margin-top: 0.75rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    will-change: transform;
 }
 
-/* Modal Styles */
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+    transform: translateY(-0.125rem);
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    transform: translateY(-0.125rem);
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+    transform: translateY(-0.125rem);
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+/* Modal Styling */
 .modal-content {
-    border-radius: 10px;
+    border-radius: 0.75rem;
+    background-color: rgba(44, 83, 100, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .modal-header {
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-footer {
-    border-top: 1px solid #eee;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-title {
+    color: white;
+}
+
+.modal-body p,
+.modal-body strong {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Form Styling */
+.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    color: white;
+}
+
+.form-label {
+    color: rgba(10, 9, 9, 0.8);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .jobs-container {
+        padding: 1rem;
+    }
+    
+    .card-img-container {
+        height: 10rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .search-input .form-control {
+        padding-left: 2rem;
+    }
+    
+    .search-input .search-icon {
+        left: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
 }

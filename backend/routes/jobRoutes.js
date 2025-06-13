@@ -1,12 +1,13 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const { exec } = require('child_process');
 const router = express.Router();
 const Job = require('../models/Job');
-const { postJobFromImage } = require('../utils/jobImageProcessor');
 const User = require('../models/User');
 const { validateJobData } = require('../utils/Validator');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { extractSkills } = require('../utils/skills-db');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -29,6 +30,31 @@ const upload = multer({
 
 const DEFAULT_IMAGE_URL = '/uploads/placeholder-image.jpg';
 
+// function to call Python OCR processor
+async function postJobFromImage(imagePath) {
+    return new Promise((resolve, reject) => {
+        const pythonScriptPath = path.join(__dirname, '../python/job_processor.py');
+        
+        exec(`python ${pythonScriptPath} "${imagePath}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.error('Python OCR error:', error);
+                return reject(new Error('Failed to process job image'));
+            }
+            if (stderr) {
+                console.error('Python stderr:', stderr);
+            }
+            
+            try {
+                const result = JSON.parse(stdout);
+                resolve(result);
+            } catch (parseError) {
+                console.error('Failed to parse Python output:', parseError);
+                reject(new Error('Invalid OCR processing result'));
+            }
+        });
+    });
+}
+
 router.post(
     '/post-job',
     authMiddleware,
@@ -38,15 +64,20 @@ router.post(
         try {
             let jobData;
             if (req.file) {
-                // Process via OCR
+                // Process via Python OCR
                 jobData = await postJobFromImage(req.file.path);
+                
+                // Ensure skills array exists
+                if (!jobData.skills) {
+                    jobData.skills = extractSkills(jobData.description || '');
+                }
             } else {
                 // Manual input
                 const { title, description, skills } = req.body;
                 jobData = {
                     title,
                     description,
-                    skills: skills || extractSkills(description), // Auto-detect skills if not provided
+                    skills: skills || extractSkills(description),
                     jobImage: '/uploads/default-job.png'
                 };
             }
@@ -61,7 +92,7 @@ router.post(
             res.status(201).send(job);
         } catch (error) {
             console.error('Error creating job:', error);
-            res.status(500).send({ message: 'Internal server error. Please try again later.' });
+            res.status(500).send({ message: error.message || 'Internal server error. Please try again later.' });
         }
     }
 );

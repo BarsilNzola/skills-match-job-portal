@@ -1,61 +1,91 @@
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import json
+import re
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
-def filterJobsBySkills(userSkills, jobDescriptions):
-    # Debug logs to stderr
-    print("User Skills:", userSkills, file=sys.stderr)
-    print("Job Descriptions:", jobDescriptions, file=sys.stderr)
+def extract_keywords(text):
+    """Extract potential skills/qualifications from text"""
+    keywords = set()
+    # Simple pattern matching - enhance with your own rules
+    patterns = {
+        'education': r'(bachelor|bsc|master|msc|phd|degree|diploma)\s*(?:in|of)?\s*([a-z\s]+)',
+        'experience': r'(\d+\+?\s*years?)\s*(?:of|experience)\s*(?:in|with)?\s*([a-z\s]+)',
+        'skills': r'(proficient|experienced|skilled)\s*(?:in|with)?\s*([a-z\s]+)'
+    }
+    
+    text = text.lower()
+    for category, pattern in patterns.items():
+        matches = re.finditer(pattern, text)
+        for match in matches:
+            keywords.add(match.group(2).strip())
+    return list(keywords)
 
-    # Ensure inputs are valid
-    if not isinstance(userSkills, list) or not isinstance(jobDescriptions, list):
-        raise ValueError("userSkills and jobDescriptions must be lists")
-
-    # Convert user skills into a single string
-    user_skills_text = " ".join(userSkills)
-
-    # Combine user skills and job descriptions for vectorization
-    texts = [user_skills_text] + jobDescriptions
-
-    # Vectorize the texts
-    vectorizer = CountVectorizer().fit_transform(texts)
-    vectors = vectorizer.toarray()
-
-    # Compute cosine similarity between user skills and each job description
-    cosine_sim = cosine_similarity(vectors)
-
-    # Extract similarity scores (first row contains similarity between user skills and each job description)
-    similarity_scores = cosine_sim[0][1:]  # Skip the first element (similarity of user skills with itself)
-
-    # Pair each job description with its similarity score
-    scored_jobs = list(zip(similarity_scores, jobDescriptions))
-
-    # Sort jobs by similarity score (descending order)
-    sorted_jobs = sorted(scored_jobs, key=lambda x: x[0], reverse=True)
-
-    # Return sorted jobs with their similarity scores
-    return [{"description": job, "similarity": float(score)} for score, job in sorted_jobs]
+def calculate_scores(user_profile, jobs):
+    # Prepare all text data
+    all_texts = [
+        user_profile['experience'],
+        user_profile['education']
+    ] + [job['description'] for job in jobs]
+    
+    # Create TF-IDF vectors
+    vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
+    vectors = vectorizer.fit_transform(all_texts)
+    
+    # Split vectors back apart
+    user_exp_vec = vectors[0]
+    user_edu_vec = vectors[1]
+    job_vecs = vectors[2:]
+    
+    # Calculate similarities
+    results = []
+    for i, job in enumerate(jobs):
+        job_vec = job_vecs[i]
+        
+        # Calculate individual similarities
+        exp_sim = cosine_similarity(user_exp_vec, job_vec)[0][0]
+        edu_sim = cosine_similarity(user_edu_vec, job_vec)[0][0]
+        
+        # Calculate skill match
+        job_keywords = set(re.findall(r'\b[a-z]{3,}\b', job['description'].lower()))
+        user_skills = set(skill.lower() for skill in user_profile['skills'])
+        skill_match = len(job_keywords & user_skills) / len(job_keywords) if job_keywords else 0
+        
+        # Combined score
+        combined_score = 0.4 * exp_sim + 0.3 * edu_sim + 0.3 * skill_match
+        
+        results.append({
+            'job_id': job['id'],
+            'score': float(combined_score),
+            'details': {
+                'skills': float(skill_match),
+                'experience': float(exp_sim),
+                'education': float(edu_sim)
+            }
+        })
+    
+    # Create debug output that won't interfere with JSON
+    debug_info = {
+        'debug': {
+            'user_skills': list(user_skills),
+            'sample_job_keywords': list(job_keywords)[:10] if job_keywords else [],
+            'vectorizer_vocab_size': len(vectorizer.vocabulary_)
+        },
+        'results': results
+    }
+    
+    return debug_info
 
 if __name__ == "__main__":
     try:
-        raw_input_data = sys.argv[1] if len(sys.argv) > 1 else '{}'
-        print(f"Raw Input Data: {raw_input_data}", file=sys.stderr)
-
-        input_data = json.loads(raw_input_data)
-        print(f"Parsed Input Data: {input_data}", file=sys.stderr)
-
-        user_skills = input_data.get('user_skills', [])
-        job_descriptions = input_data.get('job_descriptions', [])
-
-        if not user_skills or not job_descriptions:
-            raise ValueError("Invalid input data. Expected non-empty user skills and job descriptions.")
-
-        result = filterJobsBySkills(user_skills, job_descriptions)
-        # Print only the JSON result to stdout
-        print(json.dumps(result))
-
-    except json.JSONDecodeError as json_error:
-        print(json.dumps({"error": f"JSON decode error: {str(json_error)}"}))
+        data = json.loads(sys.argv[1])
+        output = calculate_scores(data['user_profile'], data['jobs'])
+        print(json.dumps(output))
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
+        error_output = {
+            'error': str(e),
+            'traceback': str(sys.exc_info())
+        }
+        print(json.dumps(error_output))
+        sys.exit(1)

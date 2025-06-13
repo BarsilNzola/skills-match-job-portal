@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { fetchJobs, deleteJob, updateJob } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { Container, Row, Col, Card, Button, Modal, Form, Spinner, Alert } from 'react-bootstrap';
 import { FaSearch, FaMapMarkerAlt } from 'react-icons/fa'; // Import icons
 import '../styles/jobPage.css';
 
 const JobPage = () => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const { user } = useAuth(); // Directly access context
     const [jobs, setJobs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [location, setLocation] = useState('');
@@ -157,19 +158,42 @@ const JobPage = () => {
                                     />
                                 </div>
                                 <Card.Body className="text-center">
-                                    <Button variant="info" onClick={() => handleViewDetails(job)}>View Details</Button>
+                                    <Button variant="info" onClick={() => handleViewDetails(job)}>
+                                        View Details
+                                    </Button>
 
-                                    {user?.role === 'admin' && (
-                                        <div className="mt-2">
-                                            <Button variant="danger" onClick={() => handleDeleteJob(job.id)}>
+                                    {/* Enhanced admin check with multiple verification layers */}
+                                    {(user && user.role && String(user.role).toLowerCase() === 'admin') && (
+                                        <div 
+                                        className="mt-2"
+                                        style={{
+                                            padding: '5px'
+                                        }}
+                                        >
+                                        <Button
+                                            variant="danger"
+                                            onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm('Delete this job?')) {
+                                                handleDeleteJob(job.id);
+                                            }
+                                            }}
+                                            className="me-2"
+                                        >
                                             Delete
-                                            </Button>
-                                            <Button variant="primary" className="ml-2" onClick={() => handleEditClick(job)}>
+                                        </Button>
+                                        <Button
+                                            variant="primary"
+                                            onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditClick(job);
+                                            }}
+                                        >
                                             Edit
-                                            </Button>
+                                        </Button>
                                         </div>
                                     )}
-                                </Card.Body>
+                                    </Card.Body>
                             </Card>
                         </Col>
                     ))}
@@ -177,49 +201,100 @@ const JobPage = () => {
             )}
 
             {/* Job Details Modal */}
-            <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)}>
-                <Modal.Header closeButton>
-                    <Modal.Title>Job Details</Modal.Title>
+            <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
+                <Modal.Header closeButton className="modal-header-custom">
+                    <Modal.Title>{selectedJob?.title || 'Job Details'}</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="modal-body-custom">
                     {selectedJob && (
-                        <>
-                            <h5>{selectedJob.title}</h5>
-                            <p><strong>Company:</strong> {selectedJob.company}</p>
-                            <p><strong>Location:</strong> {selectedJob.location}</p>
-                            <p>{selectedJob.description}</p>
-                        </>
+                        <div className="job-details-container">
+                            {/* Job Image */}
+                            <div className="job-image-container mb-4">
+                                <img
+                                    src={
+                                        selectedJob.jobImage
+                                            ? selectedJob.jobImage.startsWith('http')
+                                                ? selectedJob.jobImage
+                                                : `http://localhost:5000${selectedJob.jobImage}`
+                                            : 'http://localhost:5000/uploads/placeholder-image.jpg'
+                                    }
+                                    alt={selectedJob.title}
+                                    className="job-detail-image"
+                                    onError={(e) => {
+                                        e.target.src = 'http://localhost:5000/uploads/placeholder-image.jpg';
+                                    }}
+                                />
+                            </div>  
+                        </div>
                     )}
                 </Modal.Body>
+                <Modal.Footer className="modal-footer-custom">
+                    <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+                        Close
+                    </Button>
+                </Modal.Footer>
             </Modal>
 
             {/* Edit Modal */}
             <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
-                <Modal.Header closeButton>
+                <Modal.Header closeButton className="modal-header-custom">
                     <Modal.Title>Edit Job Details</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="modal-body-custom">
                     <Form onSubmit={handleEditSubmit}>
                         <Form.Group className="mb-3">
-                            <Form.Label>Title</Form.Label>
-                            <Form.Control type="text" name="title" value={editJobData.title} onChange={handleEditChange} required />
+                            <Form.Label className="form-label-custom">Title</Form.Label>
+                            <Form.Control 
+                                type="text" 
+                                name="title" 
+                                value={editJobData.title} 
+                                onChange={handleEditChange} 
+                                required 
+                                className="form-control-custom"
+                            />
                         </Form.Group>
                         <Form.Group className="mb-3">
-                            <Form.Label>Company</Form.Label>
-                            <Form.Control type="text" name="company" value={editJobData.company} onChange={handleEditChange} required />
+                            <Form.Label className="form-label-custom">Company</Form.Label>
+                            <Form.Control 
+                                type="text" 
+                                name="company" 
+                                value={editJobData.company} 
+                                onChange={handleEditChange} 
+                                required 
+                                className="form-control-custom"
+                            />
                         </Form.Group>
                         <Form.Group className="mb-3">
-                            <Form.Label>Location</Form.Label>
-                            <Form.Control type="text" name="location" value={editJobData.location} onChange={handleEditChange} required />
+                            <Form.Label className="form-label-custom">Location</Form.Label>
+                            <Form.Control 
+                                type="text" 
+                                name="location" 
+                                value={editJobData.location} 
+                                onChange={handleEditChange} 
+                                required 
+                                className="form-control-custom"
+                            />
                         </Form.Group>
                         <Form.Group className="mb-3">
-                            <Form.Label>Description</Form.Label>
-                            <Form.Control as="textarea" rows={3} name="description" value={editJobData.description} onChange={handleEditChange} required />
+                            <Form.Label className="form-label-custom">Description</Form.Label>
+                            <Form.Control 
+                                as="textarea" 
+                                rows={3} 
+                                name="description" 
+                                value={editJobData.description} 
+                                onChange={handleEditChange} 
+                                required 
+                                className="form-control-custom"
+                            />
                         </Form.Group>
-                        <Button variant="success" type="submit">Save Changes</Button>
-                        <Button variant="secondary" className="ml-2" onClick={() => setShowEditModal(false)}>
-                            Close
-                        </Button>
+                        <div className="d-flex gap-2">
+                            <Button variant="success" type="submit" className="flex-grow-1">
+                                Save Changes
+                            </Button>
+                            <Button variant="secondary" onClick={() => setShowEditModal(false)} className="flex-grow-1">
+                                Close
+                            </Button>
+                        </div>
                     </Form>
                 </Modal.Body>
             </Modal>

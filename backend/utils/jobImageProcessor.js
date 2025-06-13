@@ -39,22 +39,38 @@ function cleanText(raw) {
 }
 
 // 3. OCR Text Extraction
-async function extractTextFromImage(imagePath) {
+async function extractTextFromImage(filePath) {
     return new Promise((resolve, reject) => {
-        textract.fromFileWithPath(imagePath, {
+        // Verify file exists first
+        if (!fs.existsSync(filePath)) {
+            return reject(new Error(`File not found: ${filePath}`));
+        }
+
+        const config = {
             preserveLineBreaks: true,
-            pdftotextOptions: {
-                layout: 'layout',
-                dpi: 300
+            exec: {
+                // Timeout after 30 seconds
+                maxBuffer: 50 * 1024 * 1024, // 50MB buffer
+                timeout: 30000
+            },
+            // Additional format-specific configs
+            docx: {
+                includeHeadersAndFooters: false
+            },
+            pdf: {
+                pdftotextOptions: {
+                    layout: 'layout',
+                    dpi: 300
+                }
             }
-        }, (error, text) => {
+        };
+
+        textract.fromFileWithPath(filePath, config, (error, text) => {
             if (error) {
-                console.error('OCR failed:', error);
-                reject(new Error(`Text extraction failed: ${error.message}`));
-            } else {
-                console.log(`Processed: ${path.basename(imagePath)}`);
-                resolve(cleanText(text));
+                console.error(`Textract failed for ${path.basename(filePath)}:`, error);
+                return reject(new Error(`Failed to extract text: ${error.message}`));
             }
+            resolve(cleanText(text));
         });
     });
 }

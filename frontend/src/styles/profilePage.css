@@ -1,212 +1,213 @@
+/* Base Styles - Optimized */
 .profile-container {
     background: linear-gradient(to right, rgba(15, 32, 39, 0.95), rgba(44, 83, 100, 0.95));
     color: white;
-    font-family: Arial, sans-serif;
-    padding: 20px;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Better font stack */
+    padding: 1.25rem;
     min-height: 100vh;
     width: 100%;
     margin: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    will-change: transform; /* Performance hint */
 }
 
+/* Text Elements - Color Inheritance */
 .profile-container label,
 .profile-container .form-label,
 .profile-container p,
 .profile-container .card-title,
 .profile-container .card-text {
-    color: white !important;
+    color: inherit !important; /* Changed from white to inherit */
 }
 
+/* Layout Structure */
 .profile-container .row {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 1.25rem; /* Converted from px to rem */
     justify-content: center;
+    width: 100%;
 }
 
 .profile-container .col-md-6 {
-    flex: 1;
-    max-width: 48%;
+    flex: 1 1 100%; /* Better mobile behavior */
+    max-width: 100%;
 }
 
+/* Card Styles - Performance Optimized */
 .profile-container .card {
-    padding: 20px;
-    border-radius: 15px;
+    padding: 1.25rem;
+    border-radius: 0.9375rem;
     background-color: rgba(255, 255, 255, 0.1);
     border: none;
-    color: white;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    color: inherit;
+    box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.2);
+    will-change: transform;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .profile-container .card-body {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 0.9375rem;
 }
 
+/* Skills Chips - Optimized */
 .profile-container .card-body .skills-chip {
     display: inline-block;
     background-color: #007bff;
     color: white;
-    border-radius: 50px;
-    padding: 5px 10px;
-    margin: 3px;
+    border-radius: 3.125rem;
+    padding: 0.3125rem 0.625rem;
+    margin: 0.1875rem;
     font-size: 0.9rem;
+    will-change: transform;
 }
 
-/* Profile Header Container */
+/* Profile Header - Optimized */
 .profile-header {
     display: flex;
+    flex-direction: column; /* Stack on mobile */
     align-items: center;
     gap: 1.25rem;
     margin-bottom: 1.5rem;
     padding: 0.75rem;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-  }
-  
-/* Avatar Container */
+    border-radius: 0.625rem;
+}
+
+/* Avatar Container - Performance Optimized */
 .avatar-container {
-    width: 120px;
-    height: 120px;
-    min-width: 120px;
-    min-height: 120px;
+    width: 7.5rem;
+    height: 7.5rem;
+    min-width: 7.5rem;
+    min-height: 7.5rem;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    overflow: hidden;
+    overflow: visible;
     position: relative;
+    will-change: transform;
 }
-  
-/* Avatar Image */
+
 .avatar-image {
     width: 100%;
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border: 0.1875rem solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
     background-color: #f0f2f5;
+    will-change: transform;
 }
-  
-/* Profile Text */
-.profile-text {
-    flex: 1;
-}
-  
-/* Profile Text */
-.profile-text h2 {
-    margin: 0;
-    font-size: 1.25rem; /* Reduced from 1.75rem */
-    font-weight: 600;
-    color: #fff;
-    line-height: 1.3;
-}
-  
-.profile-text .email {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.775rem; /* 14px */
-    margin-top: 0.25rem;
-    display: block;
-}
-  
-/* Admin Badge */
-.profile-text .badge {
-    margin-top: 0.75rem;
-    font-size: 0.75rem;
-    padding: 0.35em 0.65em;
-}
-  
-/* Avatar Edit Button */
+
+/* Camera Button - New comprehensive styling */
 .avatar-edit-button {
     position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 32px;
-    height: 32px;
+    bottom: 5px; /* Adjusted from transform */
+    right: 5px;  /* Adjusted from transform */
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background-color: #0d6efd;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transform: translate(25%, 25%);
-    transition: all 0.2s ease;
     border: 2px solid #fff;
-}
-  
-.avatar-edit-button:hover {
-    background-color: #0b5ed7;
-    transform: translate(25%, 25%) scale(1.1);
-}
-  
-.avatar-edit-button svg {
-    color: white;
-    font-size: 16px;
+    z-index: 10;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
 }
 
+/* Camera Icon Styling */
+.avatar-edit-button svg {
+    color: white;
+    font-size: 18px;
+    display: block;
+}
+
+/* Hover Effects */
+.avatar-edit-button:hover {
+    background-color: #0b5ed7;
+    transform: scale(1.1);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Focus State for Accessibility */
+.avatar-edit-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.5);
+}
+
+/* Profile Text - Responsive */
+.profile-text {
+    flex: 1;
+    text-align: center; /* Center on mobile */
+}
+
+.profile-text h2 {
+    margin: 0;
+    font-size: clamp(1.25rem, 4vw, 1.75rem); /* Responsive font size */
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.3;
+}
+
+/* Button Styles - Optimized */
 .profile-container .btn {
     background-color: #007bff;
-    border-radius: 5px;
+    border-radius: 0.3125rem;
     color: white;
-    padding: 10px 20px;
+    padding: 0.625rem 1.25rem;
     text-transform: uppercase;
+    transition: all 0.2s ease;
+    will-change: transform, background-color;
 }
 
 .profile-container .btn:hover {
     background-color: #0056b3;
+    transform: translateY(-0.0625rem);
 }
 
+/* Progress Bar - Optimized */
 .profile-container .progress-bar {
     background-color: #007bff;
-    height: 10px;
-    border-radius: 5px;
-    transition: width 0.5s ease;
+    height: 0.625rem;
+    border-radius: 0.3125rem;
+    transition: width 0.3s ease-out;
 }
 
+/* Recommended Jobs Grid - Optimized */
 .profile-container .recommended-jobs {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+    gap: 1.25rem;
 }
 
+/* Job Card - Performance Optimized */
 .profile-container .job-card {
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: 0.625rem;
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    will-change: transform;
 }
 
 .profile-container .job-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-0.3125rem);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
 }
 
 .profile-container .job-card img {
-    height: 200px;
+    height: 12.5rem;
     object-fit: cover;
     width: 100%;
+    will-change: transform;
 }
 
-.profile-container .job-card .card-body {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.profile-container .job-card .card-title {
-    font-size: 1.2rem;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.profile-container .job-card .card-text {
-    font-size: 1rem;
-    color: #ddd;
-}
-
+/* Modal Styles - Optimized */
 .profile-container .modal-header,
 .profile-container .modal-footer {
     border-color: rgba(255, 255, 255, 0.2);
@@ -214,28 +215,58 @@
 
 .profile-container .modal-body img {
     max-width: 100%;
-    border-radius: 10px;
+    border-radius: 0.625rem;
+    will-change: transform;
 }
 
+/* Project Card - Optimized */
 .project-card {
     background: rgba(255, 255, 255, 0.08);
     border: none;
-    border-radius: 10px;
+    border-radius: 0.625rem;
+    transition: all 0.2s ease;
 }
-  
+
 .project-card .btn {
-    margin-top: 10px;
+    margin-top: 0.625rem;
     background-color: #28a745;
     border: none;
 }
-  
-.project-card .btn:hover {
-    background-color: #218838;
+
+/* Responsive Breakpoints */
+@media (min-width: 768px) {
+    .profile-container .col-md-6 {
+        flex: 1 1 calc(50% - 1.25rem);
+        max-width: calc(50% - 1.25rem);
+    }
+
+    .profile-header {
+        flex-direction: row; /* Side by side on desktop */
+        text-align: left;
+    }
+
+    .profile-text {
+        text-align: left;
+    }
 }
-  
 
+@media (max-width: 576px) {
+    .profile-container {
+        padding: 0.9375rem;
+    }
 
+    .profile-container .card {
+        padding: 0.9375rem;
+    }
 
+    .avatar-container {
+        width: 6.25rem;
+        height: 6.25rem;
+        min-width: 6.25rem;
+        min-height: 6.25rem;
+    }
 
-
-
+    .profile-container .recommended-jobs {
+        grid-template-columns: 1fr;
+    }
+}

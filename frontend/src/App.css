@@ -36,3 +36,114 @@
     transform: rotate(360deg);
   }
 }
+
+/* Base Styles */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+/* Navigation Styles */
+.app-navbar {
+  background: linear-gradient(to right, rgba(15, 32, 39, 0.95), rgba(44, 83, 100, 0.95));
+  padding: 1rem 0;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: white !important;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-weight: 500;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  color: white !important;
+  transform: translateY(-1px);
+}
+
+.btn-link.nav-link {
+  color: rgba(255, 255, 255, 0.8) !important;
+  text-decoration: none;
+}
+
+.btn-link.nav-link:hover {
+  color: white !important;
+  background-color: transparent;
+}
+
+.navbar-toggler {
+  margin-left: auto; /* Push toggle button to right */
+  order: 2; /* Ensure it stays on the right */
+}
+
+.navbar-collapse {
+  justify-content: flex-end; /* Align menu to right */
+}
+
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* Main Content Styles */
+.app-main-content {
+  flex: 1;
+  padding: 2rem 0;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+  .navbar-collapse {
+    position: absolute;
+    right: 1rem;
+    top: 60px;
+    width: 200px;
+    background-color: rgba(15, 32, 39, 0.98);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    text-align: right;
+  }
+  
+  .navbar-nav {
+    align-items: flex-end;
+  }
+  
+  .nav-item {
+    margin: 0.5rem 0;
+    width: 100%;
+  }
+  
+  .nav-link {
+    padding: 0.5rem 0 !important;
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-main-content {
+    padding: 1.5rem 0;
+  }
+  
+  .navbar-brand {
+    font-size: 1.3rem;
+  }
+}
+
+/* Animation for logo (optional) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.navbar-brand {
+  animation: fadeIn 0.5s ease-out;
+}
