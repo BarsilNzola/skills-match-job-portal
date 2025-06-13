@@ -1,5 +1,10 @@
 .env
 /backend/temp/
+# Frontend
 frontend/node_modules
-node_modules
+frontend/.cache
+frontend/build
+
+# Backend
+backend/node_modules
 node_modules
