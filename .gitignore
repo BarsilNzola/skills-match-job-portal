@@ -1,5 +1,11 @@
 .env
 /backend/temp/
-/frontend/node_modules
-node_modules
-node_modules
+# Frontend
+frontend/node_modules
+frontend/.cache
+frontend/build
+frontend/.env.local
+
+# Backend
+backend/node_modules
+backend/.env
