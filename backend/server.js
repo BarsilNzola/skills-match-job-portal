@@ -17,7 +17,9 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.NODE_ENV === 'production' 
+        ? 'https://your-render-app.onrender.com' 
+        : 'http://localhost:3000',
     credentials: true,
     allowedHeaders: ['Authorization', 'Content-Type'],
 }));
@@ -55,6 +57,21 @@ app.use('/api/admin', adminRoutes);
 app.get('/', (req, res) => {
     res.send('Skill-Match Job Portal API');
 });
+
+// Serve React frontend in production
+if (process.env.NODE_ENV === 'production') {
+    // Serve static files from the React app
+    app.use(express.static(path.join(__dirname, '../frontend/build')));
+    
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+    });
+} else {
+    app.get('/', (req, res) => {
+        res.send('Skill-Match Job Portal API (Development Mode)');
+    });
+}
 
 // Middlewares
 app.use((req, res, next) => {
