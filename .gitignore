@@ -9,3 +9,4 @@ frontend/.env.local
 # Backend
 backend/node_modules
 backend/.env
+frontend/node_modules/.cache/
