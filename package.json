@@ -17,7 +17,8 @@
     "spellchecker": "^3.7.1",
     "symspell": "^0.6.1",
     "textract": "^2.5.0",
-    "webpack-dev-server": "^5.2.1"
+    "webpack-dev-server": "^5.2.1",
+    "concurrently": "^8.2.2"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
