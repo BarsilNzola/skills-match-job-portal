@@ -29,7 +29,10 @@
   },
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd backend && node server.js",
-    "client": "cd frontend && npm start"
+    "server": "cd backend && pip install -r requirements.txt && node server.js",
+    "client": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "prod-start": "cd backend && pip install -r requirements.txt && node server.js",
+    "install-deps": "cd backend && pip install -r requirements.txt"
   }
 }
