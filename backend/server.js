@@ -70,23 +70,25 @@ async function startServer() {
         await initSkillDatabase();
         await sequelize.sync();
         
-        const PORT = process.env.PORT || 0;
-        app.listen(PORT, '0.0.0.0', () => {
+        const PORT = process.env.PORT || 5000;
+        const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server running on port ${PORT}`);
-            console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-            console.log(`Frontend path: ${path.join(__dirname, '../frontend/build')}`);
+            console.log(`Supabase connection: ${sequelize.config.host}`);
         });
 
-        // Handle EADDRINUSE error
-        server.on('error', (e) => {
-            if (e.code === 'EADDRINUSE') {
-            console.log(`Port ${PORT} in use, retrying...`);
-            setTimeout(() => {
-                server.close();
-                server.listen(PORT, '0.0.0.0');
-            }, 1000);
+        // Error handling
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                console.log(`Port ${PORT} in use, retrying...`);
+                setTimeout(() => {
+                    server.close();
+                    server.listen(PORT, '0.0.0.0');
+                }, 1000);
+            } else {
+                console.error('Server error:', error);
             }
         });
+
     } catch (error) {
         console.error('Server startup failed:', error);
         process.exit(1);
