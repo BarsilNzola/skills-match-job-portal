@@ -69,10 +69,4 @@ sequelize.authenticate()
     if (isProduction) process.exit(1);
   });
 
-// Cleanup on shutdown
-process.on('SIGTERM', async () => {
-  await sequelize.close().catch(e => console.error('Shutdown error:', e));
-  console.log('Database connections closed');
-});
-
 module.exports = sequelize;
