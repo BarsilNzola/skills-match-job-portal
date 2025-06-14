@@ -66,7 +66,7 @@ async function startServer() {
         await initSkillDatabase();
         await sequelize.sync();
         
-        // PORT assignment - CRITICAL CHANGE
+        // PORT assignment
         const PORT = process.env.PORT || 5000;
         console.log(`Starting server on port: ${PORT}`);
 
