@@ -14,9 +14,12 @@ const adminRoutes = require('./routes/adminRoutes');
 // Load environment variables FIRST
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-// Debug environment immediately
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('PORT:', process.env.PORT);
+// 2. Debug environment immediately - CRITICAL FOR DIAGNOSIS
+console.log('Environment variables:', {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    SUPABASE_DB_URL: process.env.SUPABASE_DB_URL ? 'exists' : 'missing'
+  });
 
 const app = express();
 
@@ -58,37 +61,38 @@ app.use((err, req, res, next) => {
     res.status(500).send('Something broke!');
 });
 
-// 6. Server initialization
-let server; // Declare server at module level
+// 8. Server initialization
+let server;
 
 async function startServer() {
     try {
+        // Initialize database
+        const { initSkillDatabase } = require('./utils/skills-db');
+        const sequelize = require('./config/db');
+        
         await initSkillDatabase();
         await sequelize.sync();
         
-        // PORT assignment
-        const PORT = process.env.PORT || 5000;
+        // PORT assignment - RENDER-SPECIFIC LOGIC
+        const PORT = (() => {
+          const renderPort = process.env.PORT;
+          if (!renderPort && process.env.NODE_ENV === 'production') {
+            console.error('FATAL: Render did not provide PORT');
+            process.exit(1);
+          }
+          return renderPort ? parseInt(renderPort) : 5000;
+        })();
+
         console.log(`Starting server on port: ${PORT}`);
 
         server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`✅ Server running on: ${server.address().port}`);
-            console.log(`➡️ Health check at: http://0.0.0.0:${server.address().port}/api/health`);
         });
 
         server.on('error', error => {
-            if (error.code === 'EADDRINUSE') {
-                console.error(`❌ Port ${PORT} in use - NOT retrying`);
-            } else {
-                console.error('Server error:', error);
-            }
-            process.exit(1);
+            console.error(`❌ FATAL PORT ERROR (${PORT}):`, error.code);
+            process.exit(1); // Let Render handle restarts
         });
-
-        // Memory monitoring
-        setInterval(() => {
-            const used = process.memoryUsage();
-            console.log(`Memory usage: ${Math.round(used.rss / 1024 / 1024)}MB`);
-        }, 30000);
 
     } catch (error) {
         console.error('Server startup failed:', error);
@@ -100,10 +104,8 @@ async function startServer() {
 process.on('SIGTERM', () => {
     console.log('SIGTERM received - shutting down');
     server?.close(() => {
-        sequelize.close().then(() => {
-            console.log('Server and database connections closed');
-            process.exit(0);
-        });
+        console.log('Server connections closed');
+        process.exit(0);
     });
 });
 
