@@ -70,24 +70,27 @@ async function startServer() {
         await initSkillDatabase();
         await sequelize.sync();
         
+        // DEBUG: Log all environment variables
+        console.log('Environment:', Object.keys(process.env));
+        
         const PORT = process.env.PORT || 5000;
+        console.log(`Attempting to start on port: ${PORT}`);
+        
         const server = app.listen(PORT, '0.0.0.0', () => {
-            console.log(`Server running on port ${PORT}`);
-            console.log(`Supabase connection: ${sequelize.config.host}`);
+            console.log(`✅ Server successfully started on port ${PORT}`);
         });
 
-        // Error handling
-        server.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                console.log(`Port ${PORT} in use, retrying...`);
-                setTimeout(() => {
-                    server.close();
-                    server.listen(PORT, '0.0.0.0');
-                }, 1000);
-            } else {
-                console.error('Server error:', error);
-            }
+        // Critical error handling - NO RETRY LOGIC
+        server.on('error', error => {
+            console.error(`❌ FATAL PORT ERROR (${PORT}):`, error.code);
+            process.exit(1); // Let Render handle restarts
         });
+
+        // Add memory monitoring
+        setInterval(() => {
+            const used = process.memoryUsage();
+            console.log(`Memory: ${Math.round(used.rss / 1024 / 1024)}MB RSS`);
+        }, 5000);
 
     } catch (error) {
         console.error('Server startup failed:', error);

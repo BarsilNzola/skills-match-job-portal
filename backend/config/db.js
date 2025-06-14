@@ -1,56 +1,78 @@
 const { Sequelize } = require('sequelize');
-require('dotenv').config({ path: './.env' });
+require('dotenv').config();
 
-// Determine if we're in production (Supabase) or development (local MySQL)
 const isProduction = process.env.NODE_ENV === 'production';
+const poolerUrl = process.env.SUPABASE_DB_URL; // Your pooler URL
 
-let sequelize;
-
-if (isProduction) {
-  // Supabase (PostgreSQL) configuration
-  if (!process.env.SUPABASE_DB_URL) {
-    throw new Error('Supabase database URL is missing in production environment');
+const commonConfig = {
+  dialect: 'postgres',
+  logging: false,
+  pool: {
+    max: 3,                 // Critical for Render's free tier
+    min: 0,
+    acquire: 30000,
+    idle: 5000,
+    evict: 10000            // Stale connection cleanup
+  },
+  retry: {
+    max: 3,
+    match: [/timeout/i, /connection/i]
   }
+};
 
-  sequelize = new Sequelize(process.env.SUPABASE_DB_URL, {
-    dialect: 'postgres',
-    protocol: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
+const sequelize = isProduction 
+  ? new Sequelize(poolerUrl, {
+      ...commonConfig,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        },
+        // Pooler-specific settings
+        application_name: 'skills-match-app',
+        connectionTimeoutMillis: 5000,
+        keepAlive: true
+      },
+      // Prevent connection leaks
+      hooks: {
+        beforeDisconnect: (conn) => {
+          console.log('Closing database connection');
+          conn.end().catch(e => console.error('Connection close error:', e));
+        }
       }
-    },
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    },
-    logging: false
-  });
-} else {
-  // Local MySQL configuration
-  if (!process.env.DB_NAME || !process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_HOST) {
-    throw new Error('Local database configuration environment variables are missing');
-  }
-
-  sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
+    })
+  : new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
     host: process.env.DB_HOST,
     dialect: 'mysql',
     pool: {
-      max: 5,
+      max: 2,  // Safer for local development
       min: 0,
       acquire: 30000,
-      idle: 10000
+      idle: 5000,
+      evict: 10000
     },
-    logging: console.log // Enable logging in development
+    logging: msg => console.log(msg) // Controlled logging
   });
-}
 
-// Test database connection
+// Enhanced connection test
 sequelize.authenticate()
-  .then(() => console.log(`Connected to ${isProduction ? 'Supabase PostgreSQL' : 'local MySQL'} database`))
-  .catch(err => console.error('Database connection error:', err.message));
+  .then(() => {
+    console.log(`🟢 Connected to ${isProduction ? 'Supabase Pooler' : 'Local DB'}`);
+    // Verify pooler connection
+    return sequelize.query('SELECT pg_backend_pid() AS pid, current_database() AS db');
+  })
+  .then(([results]) => {
+    console.log('Connection verified:', results[0]);
+  })
+  .catch(err => {
+    console.error('🔴 Connection failed:', err.message);
+    if (isProduction) process.exit(1);
+  });
+
+// Cleanup on shutdown
+process.on('SIGTERM', async () => {
+  await sequelize.close().catch(e => console.error('Shutdown error:', e));
+  console.log('Database connections closed');
+});
 
 module.exports = sequelize;
