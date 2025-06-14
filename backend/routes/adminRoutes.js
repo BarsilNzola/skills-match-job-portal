@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { postJobFromImage } = require('../utils/jobImageProcessor'); // Ensure this utility is properly implemented
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const Job = require('../models/Job');
 
