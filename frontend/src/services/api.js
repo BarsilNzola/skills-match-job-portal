@@ -1,9 +1,13 @@
 import axios from 'axios';
 
-// Base API configuration
+// Configure base URL based on environment
+const BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://skills-match.onrender.com'  // Production URL
+  : 'http://localhost:5000';            // Development URL
+
 const api = axios.create({
-    baseURL: 'http://localhost:5000',
-    withCredentials: true,  // Ensure cookies (session) are sent with requests
+    baseURL: BASE_URL,
+    withCredentials: true,
 });
 
 // Interceptors for adding Authorization header
@@ -24,7 +28,7 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             localStorage.removeItem('authToken');
-            window.location.href = '/login';  // Redirect to login page
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }
@@ -42,11 +46,11 @@ export const registerUser = (userData) => api.post('/users/register', userData).
 export const loginUser = async (userData) => {
     try {
         const response = await api.post('/users/login', userData);
-        const token = response.data.token;  // Assuming token is returned in the response
-        localStorage.setItem('authToken', token);  // Store token in localStorage
-        return response;  // Return the entire response for further use
+        const token = response.data.token;
+        localStorage.setItem('authToken', token);
+        return response;
     } catch (error) {
-        return Promise.reject(handleApiError(error));  // Ensure consistent error handling
+        return Promise.reject(handleApiError(error));
     }
 };
 
@@ -61,9 +65,7 @@ export const uploadAvatar = (formData) => {
     });
 };
 
-export const getAvatarUrl = (userId) => 
-    `http://localhost:5000/users/avatar/${userId}`;
-
+export const getAvatarUrl = (userId) => `${BASE_URL}/users/avatar/${userId}`;
 
 export const updateUserProfile = (profileData) =>
     api.put('/users/profile', profileData).catch(handleApiError);
@@ -77,7 +79,7 @@ export const uploadCV = (formData) => {
 };
 
 export const downloadCV = () => api.get('/users/download-cv', { 
-    responseType: 'blob' // Important for file downloads
+    responseType: 'blob'
 });
 
 export const convertCV = (targetFormat) => 
@@ -85,13 +87,7 @@ export const convertCV = (targetFormat) =>
 
 export const fetchRecommendedJobs = async () => {
     try {
-        console.log("Calling /users/recommendations...");
-        const response = await api.get('/users/recommendations', {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-            },
-        });
-        console.log("Recommended Jobs:", response.data);
+        const response = await api.get('/users/recommendations');
         return response.data;
     } catch (error) {
         console.error("Fetch Recommended Jobs Error:", error.response?.data || error.message);
@@ -99,14 +95,10 @@ export const fetchRecommendedJobs = async () => {
     }
 };
 
-
 // Job-related API functions
 export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 
-
-
-// Posting job from image
 export const postJobFromImage = async (formData) => {
     return api.post('/api/admin/post-job', formData, {
         headers: {
@@ -117,7 +109,6 @@ export const postJobFromImage = async (formData) => {
     .catch(handleApiError);
 };
 
-// Post job via manual input
 export const postJobManual = (jobData) => {
     return api.post('/api/admin/post-job', jobData, {
         headers: {
@@ -128,10 +119,7 @@ export const postJobManual = (jobData) => {
     .catch(handleApiError);
 };
 
-// Delete a job by ID (Only accessible to admins)
 export const deleteJob = (id) => api.delete(`/jobs/${id}`).catch(handleApiError);
-
-// Edit job
 export const updateJob = (id, jobData) => api.put(`/jobs/${id}`, jobData).catch(handleApiError);
 
 // Application-related API functions
