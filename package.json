@@ -3,6 +3,7 @@
     "@google-cloud/vision": "^4.3.2",
     "bcryptjs": "^2.4.3",
     "cloudconvert": "^3.0.0",
+    "concurrently": "^8.2.2",
     "csv-parser": "^3.2.0",
     "docx-pdf": "^0.0.1",
     "express-rate-limit": "^7.5.0",
@@ -17,14 +18,12 @@
     "spellchecker": "^3.7.1",
     "symspell": "^0.6.1",
     "textract": "^2.5.0",
-    "webpack-dev-server": "^5.2.1",
-    "concurrently": "^8.2.2"
+    "webpack-dev-server": "^5.2.1"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0",
+    "@babel/core": "^7.0.0",
     "@babel/plugin-transform-private-property-in-object": "^7.24.0",
-    "@babel/core": "^7.0.0"
-
+    "concurrently": "^9.1.0"
   },
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",

@@ -15,6 +15,7 @@ dotenv.config();
 
 const app = express();
 
+// 1. Middlewares
 app.use(express.json());
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
@@ -26,27 +27,9 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Initialize services before starting server
-async function initializeServer() {
-    try {
-        // 1. Initialize Skill Database
-        await initSkillDatabase();
-        console.log('Skill database initialized');
-
-        // 2. Sync Database
-        await sequelize.sync();
-        console.log('Database synced successfully!');
-
-        // 3. Start Server
-        const PORT = process.env.PORT || 5000;
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-
-    } catch (error) {
-        console.error('Failed to initialize server:', error);
-        process.exit(1); // Exit if critical initialization fails
-    }
+// 2. Production static files (MUST come before routes)
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../frontend/build')));
 }
 
 // Routes (can be moved before initializeServer if preferred)
@@ -58,18 +41,15 @@ app.get('/', (req, res) => {
     res.send('Skill-Match Job Portal API');
 });
 
-// Serve React frontend in production
+// 4. Health check
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'healthy' });
+});
+
+// 5. Final catch-all route for production
 if (process.env.NODE_ENV === 'production') {
-    // Serve static files from the React app
-    app.use(express.static(path.join(__dirname, '../frontend/build')));
-    
-    // Handle React routing, return all requests to React app
     app.get('*', (req, res) => {
         res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
-    });
-} else {
-    app.get('/', (req, res) => {
-        res.send('Skill-Match Job Portal API (Development Mode)');
     });
 }
 
@@ -84,5 +64,22 @@ app.use((err, req, res, next) => {
     res.status(500).send('Something broke!');
 });
 
-// Start everything
-initializeServer();
+// 7. Initialize and start server
+async function startServer() {
+    try {
+        await initSkillDatabase();
+        await sequelize.sync();
+        
+        const PORT = process.env.PORT || 5000;
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+            console.log(`Frontend path: ${path.join(__dirname, '../frontend/build')}`);
+        });
+    } catch (error) {
+        console.error('Server startup failed:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
