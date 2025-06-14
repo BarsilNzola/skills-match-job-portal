@@ -100,13 +100,4 @@ async function startServer() {
     }
 }
 
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received - shutting down');
-    server?.close(() => {
-        console.log('Server connections closed');
-        process.exit(0);
-    });
-});
-
 startServer();
