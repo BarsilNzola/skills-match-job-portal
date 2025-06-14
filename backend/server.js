@@ -6,6 +6,11 @@ const dotenv = require('dotenv');
 const sequelize = require('./config/db');
 const { initSkillDatabase } = require('./utils/skills-db');
 
+const userRoutes = require('./routes/userRoutes');
+const jobRoutes = require('./routes/jobRoutes');
+const applicationRoutes = require('./routes/applicationRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
 // Load environment variables FIRST
 dotenv.config({ path: path.join(__dirname, '.env') });
 

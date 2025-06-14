@@ -17,7 +17,6 @@
     "simple-statistics": "^7.8.7",
     "spellchecker": "^3.7.1",
     "symspell": "^0.6.1",
-    "textract": "^2.5.0",
     "webpack-dev-server": "^5.2.1"
   },
   "devDependencies": {
