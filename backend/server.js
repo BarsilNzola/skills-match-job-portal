@@ -71,22 +71,17 @@ async function startServer() {
         await sequelize.sync();
         
         const PORT = process.env.PORT || 5000;
+
         const server = app.listen(PORT, '0.0.0.0', () => {
-            console.log(`Server running on port ${PORT}`);
-            console.log(`Supabase connection: ${sequelize.config.host}`);
+        console.log(`Server ACTUALLY running on: ${PORT}`); // Add this log
         });
 
-        // Error handling
-        server.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                console.log(`Port ${PORT} in use, retrying...`);
-                setTimeout(() => {
-                    server.close();
-                    server.listen(PORT, '0.0.0.0');
-                }, 1000);
-            } else {
-                console.error('Server error:', error);
-            }
+        // Add this error handler
+        server.on('error', error => {
+        if (error.code === 'EADDRINUSE') {
+            console.error(`Fatal: Port ${PORT} in use`);
+            process.exit(1); // Exit completely to let Render restart
+        }
         });
 
     } catch (error) {
