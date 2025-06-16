@@ -37,14 +37,36 @@ const AdminPanel = () => {
   // Handlers
   const fileInputRef = useRef();
 
-  const handleImageChange = (e) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    console.log('Selected file:', file);
-    
-    // Store reference
-    fileInputRef.current = file;
+    if (!file) return;
+  
+    try {
+      console.log('Uploading file:', { 
+        name: file.name,
+        type: file.type,
+        size: file.size 
+      });
+  
+      // Create clean FormData (important!)
+      const formData = new FormData();
+      formData.append('jobImage', file);  // Must match backend field name
+      
+      // Ensure no other headers are interfering
+      const response = await api.post('/api/admin/post-job', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+  
+      console.log('Upload success:', response.data);
+    } catch (error) {
+      console.error('Upload failed:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        error: error.message
+      });
+    }
   };
 
   const handleInputChange = useCallback((e) => {

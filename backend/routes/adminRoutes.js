@@ -13,18 +13,14 @@ const router = express.Router();
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB
+      fileSize: 5 * 1024 * 1024,
     },
     fileFilter: (req, file, cb) => {
-      const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-      const ext = path.extname(file.originalname).toLowerCase();
-      
-      if (!validExtensions.includes(ext)) {
-        return cb(new Error('Invalid file extension'), false);
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files allowed'), false);
       }
-      
-      // If we got this far, the file is valid
-      cb(null, true);
     }
 }).single('jobImage');
 
