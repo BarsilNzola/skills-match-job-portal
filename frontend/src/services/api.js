@@ -125,7 +125,7 @@ export const postJobFromImage = async (file) => {
     }
 
     // Check file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const validTypes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
         throw new Error('Invalid file type. Only JPEG, PNG, or WebP allowed');
     }
