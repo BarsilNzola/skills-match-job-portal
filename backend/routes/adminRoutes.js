@@ -26,7 +26,7 @@ const upload = multer({
         });
 
         // Validate file type
-        const validMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        const validMimes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
         const isValidType = validMimes.includes(file.mimetype);
         const isValidExt = ['.jpg', '.jpeg', '.png', '.webp']
             .includes(path.extname(file.originalname).toLowerCase());
