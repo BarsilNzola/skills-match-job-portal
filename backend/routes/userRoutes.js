@@ -6,6 +6,7 @@ const { authMiddleware, adminMiddleware } = require('../middleware/auth');  // A
 const { calculateJobRecommendations } = require('../utils/Recommendation');
 const { convertPdfToDocx, convertDocxToPdf } = require('../utils/conversionUtils');
 const supabase = require('../utils/supabase');
+const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 
 const router = express.Router();
