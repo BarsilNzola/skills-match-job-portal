@@ -57,7 +57,10 @@ export const loginUser = async (userData) => {
 export const fetchUserProfile = () => api.get('/users/profile').catch(handleApiError);
 export const updateUserSkills = (skillsData) => api.put('/users/skills', skillsData).catch(handleApiError);
 
-export const uploadAvatar = (formData) => {
+// Updated file upload/download functions
+export const uploadAvatar = (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
     return api.post('/users/upload-avatar', formData, {
         headers: {
             'Content-Type': 'multipart/form-data'
@@ -65,12 +68,19 @@ export const uploadAvatar = (formData) => {
     });
 };
 
-export const getAvatarUrl = (userId) => `${BASE_URL}/users/avatar/${userId}`;
+// Modified to handle Supabase URLs directly
+export const getAvatarUrl = (userId) => {
+    return api.get(`/users/avatar/${userId}`)
+        .then(response => response.data.url || response.data)
+        .catch(() => `${BASE_URL}/default-avatar.jpg`);
+};
 
 export const updateUserProfile = (profileData) =>
     api.put('/users/profile', profileData).catch(handleApiError);
 
-export const uploadCV = (formData) => {
+export const uploadCV = (file) => {
+    const formData = new FormData();
+    formData.append('cv', file);
     return api.post('/users/upload-cv', formData, {
         headers: {
             'Content-Type': 'multipart/form-data'
@@ -78,9 +88,18 @@ export const uploadCV = (formData) => {
     });
 };
 
-export const downloadCV = () => api.get('/users/download-cv', { 
-    responseType: 'blob'
-});
+// Updated to handle Supabase signed URLs
+export const downloadCV = () => 
+    api.get('/users/download-cv')
+        .then(response => {
+            if (response.data.url) {
+                // For Supabase signed URLs, redirect to the URL
+                window.location.href = response.data.url;
+                return null;
+            }
+            return response.data;
+        })
+        .catch(handleApiError);
 
 export const convertCV = (targetFormat) => 
     api.post('/users/convert-cv', { format: targetFormat });
@@ -99,7 +118,9 @@ export const fetchRecommendedJobs = async () => {
 export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 
-export const postJobFromImage = async (formData) => {
+export const postJobFromImage = async (file) => {
+    const formData = new FormData();
+    formData.append('jobImage', file);
     return api.post('/api/admin/post-job', formData, {
         headers: {
             'Content-Type': 'multipart/form-data',

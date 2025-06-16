@@ -93,23 +93,32 @@ const ProfilePage = () => {
         if (!file) return;
         
         try {
-          const formData = new FormData();
-          formData.append('avatar', file);
+          // Show loading state
+          setUploading(true);
+          setError(null);
           
-          const response = await uploadAvatar(formData);
+          // Upload the file directly (no need for FormData with our updated API)
+          const response = await uploadAvatar(file);
           console.log('Upload response:', response.data);
           
-          // Force refresh by fetching updated profile
-          const profileResponse = await fetchUserProfile();
-          setUser(profileResponse.data);
+          // Update user state with the new avatar URL
+          // The response should contain the Supabase URL directly
+          setUser(prevUser => ({
+            ...prevUser,
+            profileImage: response.data.url || response.data.profileImage
+          }));
+          
+          // Optional: Show success message
+          setSuccess('Profile picture updated successfully!');
           
         } catch (error) {
           console.error('Upload failed:', error);
-          setError('Failed to upload image. Please try again.');
+          setError(error.message || 'Failed to upload image. Please try again.');
         } finally {
+          setUploading(false);
           e.target.value = ''; // Reset input
         }
-      };
+    };
 
     const fetchJobs = async () => {
         setLoadingJobs(true);
@@ -155,7 +164,7 @@ const ProfilePage = () => {
                                     {/* Avatar Container */}
                                     <div className="avatar-container">
                                         <img
-                                        src={user.profileImage ? `http://localhost:5000/users/avatar/${user.id}` : '/default-avatar.jpg'}
+                                        src={user?.profileImage || getAvatarUrl(user?.id)}
                                         alt="Profile"
                                         className="avatar-image"
                                         onError={(e) => {
