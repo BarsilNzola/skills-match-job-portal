@@ -8,11 +8,6 @@ const { convertPdfToDocx, convertDocxToPdf } = require('../utils/conversionUtils
 const supabase = require('../utils/supabase');
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
-  );
-
 const router = express.Router();
 const memoryStorage = multer.memoryStorage();
 const path = require('path');
@@ -333,7 +328,7 @@ router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res
         // Generate unique filename
         const fileExt = path.extname(req.file.originalname);
         const cvPath = `user-cvs/${user.id}/cv-${Date.now()}${fileExt}`;
-        
+
         // Upload to Supabase
         const { error } = await supabase.storage
             .from('user-cvs')

@@ -8,50 +8,45 @@ const User = require('../models/User');
 const { validateJobData } = require('../utils/Validator');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { extractSkills } = require('../utils/skills-db');
+const supabase = require('../utils/supabase'); // Add Supabase client
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '../uploads'))
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
+// Remove disk storage and use memory storage instead
 const upload = multer({ 
-    storage,
+    storage: multer.memoryStorage(),
     fileFilter: (req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
             return cb(new Error('Only image files are allowed!'), false);
         }
         cb(null, true);
-    }
+    },
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
 const DEFAULT_IMAGE_URL = '/uploads/placeholder-image.jpg';
 
 // function to call Python OCR processor
-async function postJobFromImage(imagePath) {
+async function postJobFromImage(imageBuffer) {
     return new Promise((resolve, reject) => {
-        const pythonScriptPath = path.join(__dirname, '../python/job_processor.py');
+        const pythonScriptPath = path.join(__dirname, '../scripts/job_processor.py');
         
-        exec(`python ${pythonScriptPath} "${imagePath}"`, (error, stdout, stderr) => {
+        // Pass the buffer directly to Python via stdin
+        const pythonProcess = exec(`python ${pythonScriptPath}`, (error, stdout, stderr) => {
             if (error) {
                 console.error('Python OCR error:', error);
                 return reject(new Error('Failed to process job image'));
-            }
-            if (stderr) {
-                console.error('Python stderr:', stderr);
             }
             
             try {
                 const result = JSON.parse(stdout);
                 resolve(result);
             } catch (parseError) {
-                console.error('Failed to parse Python output:', parseError);
                 reject(new Error('Invalid OCR processing result'));
             }
         });
+        
+        // Write the image buffer to Python's stdin
+        pythonProcess.stdin.write(imageBuffer);
+        pythonProcess.stdin.end();
     });
 }
 
@@ -63,11 +58,34 @@ router.post(
     async (req, res) => {
         try {
             let jobData;
+            let jobImageUrl = DEFAULT_IMAGE_URL;
+
             if (req.file) {
-                // Process via Python OCR
-                jobData = await postJobFromImage(req.file.path);
+                // Upload image to Supabase
+                const fileExt = path.extname(req.file.originalname);
+                const fileName = `job-images/${Date.now()}${fileExt}`;
                 
-                // Ensure skills array exists
+                const { data, error } = await supabase.storage
+                    .from('job-images')
+                    .upload(fileName, req.file.buffer, {
+                        contentType: req.file.mimetype,
+                        upsert: true
+                    });
+
+                if (error) throw error;
+
+                // Get public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('job-images')
+                    .getPublicUrl(fileName);
+
+                jobImageUrl = publicUrl;
+
+                // Process via Python OCR (if still needed)
+                // Note: You'll need to modify your Python script to work with file buffers
+                // or implement a temporary file approach
+                jobData = await postJobFromImage(req.file.buffer); // Modified function needed
+                
                 if (!jobData.skills) {
                     jobData.skills = extractSkills(jobData.description || '');
                 }
@@ -78,9 +96,12 @@ router.post(
                     title,
                     description,
                     skills: skills || extractSkills(description),
-                    jobImage: '/uploads/default-job.png'
+                    jobImage: DEFAULT_IMAGE_URL
                 };
             }
+
+            // Add image URL to job data
+            jobData.jobImage = jobImageUrl;
 
             const validationError = validateJobData(jobData);
             if (validationError) {
@@ -88,11 +109,10 @@ router.post(
             }
 
             const job = await Job.create(jobData);
-            console.log('Job successfully posted:', job);
             res.status(201).send(job);
         } catch (error) {
             console.error('Error creating job:', error);
-            res.status(500).send({ message: error.message || 'Internal server error. Please try again later.' });
+            res.status(500).send({ message: error.message || 'Internal server error.' });
         }
     }
 );
@@ -102,35 +122,39 @@ router.get('/', async (req, res) => {
         const jobs = await Job.findAll({
             attributes: ['id', 'title', 'company', 'location', 'description', 'jobImage'],
         });
-        console.log('Fetched Jobs:', jobs);
-        res.status(200).send(jobs);
+        
+        // Ensure all jobs have proper image URLs
+        const jobsWithImages = jobs.map(job => ({
+            ...job.toJSON(),
+            jobImage: job.jobImage || DEFAULT_IMAGE_URL
+        }));
+        
+        res.status(200).send(jobsWithImages);
     } catch (error) {
-        console.error('Error fetching jobs:', error);
-        res.status(500).send({ message: 'Failed to retrieve jobs. Please try again later.' });
+        res.status(500).send({ message: 'Failed to retrieve jobs.' });
     }
 });
 
 router.get('/:id', async (req, res) => {
     try {
-        const job = await Job.findByPk(req.params.id, {
-            attributes: ['id', 'title', 'company', 'location', 'description', 'jobImage'],
-        });
+        const job = await Job.findByPk(req.params.id);
         if (!job) {
             return res.status(404).send({ message: 'Job not found' });
         }
 
-        if (!job.image) {
-            job.image = DEFAULT_IMAGE_URL;
-        }
+        // Ensure image URL exists
+        const jobWithImage = {
+            ...job.toJSON(),
+            jobImage: job.jobImage || DEFAULT_IMAGE_URL
+        };
 
-        res.status(200).send(job);
+        res.status(200).send(jobWithImage);
     } catch (error) {
-        console.error('Error fetching job by ID:', error);
-        res.status(500).send({ message: 'Error retrieving job. Please try again later.' });
+        res.status(500).send({ message: 'Error retrieving job.' });
     }
 });
 
-router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, adminMiddleware, upload.single('jobImage'), async (req, res) => {
     try {
         const { id } = req.params;
         const job = await Job.findByPk(id);
@@ -139,36 +163,68 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
             return res.status(404).send({ message: 'Job not found' });
         }
 
+        let jobImageUrl = job.jobImage;
+
+        if (req.file) {
+            // Upload new image to Supabase
+            const fileExt = path.extname(req.file.originalname);
+            const fileName = `job-images/${Date.now()}${fileExt}`;
+            
+            const { error } = await supabase.storage
+                .from('job-images')
+                .upload(fileName, req.file.buffer, {
+                    contentType: req.file.mimetype
+                });
+
+            if (error) throw error;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('job-images')
+                .getPublicUrl(fileName);
+
+            jobImageUrl = publicUrl;
+        }
+
         const updatedData = {
             title: req.body.title,
             description: req.body.description,
             location: req.body.location,
             salary: req.body.salary,
-            company: req.body.company
+            company: req.body.company,
+            jobImage: jobImageUrl
         };
 
         const updatedJob = await job.update(updatedData);
         res.status(200).send(updatedJob);
     } catch (error) {
-        console.error('Error updating job:', error);
-        res.status(500).send({ message: 'Internal server error. Please try again later.' });
+        res.status(500).send({ message: 'Error updating job.' });
     }
 });
 
 router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        const jobId = req.params.id;
-        const job = await Job.findByPk(jobId);
-
+        const job = await Job.findByPk(req.params.id);
         if (!job) {
             return res.status(404).send({ message: 'Job not found' });
+        }
+
+        // Delete image from Supabase if it's not the default
+        if (job.jobImage && !job.jobImage.includes('default-job')) {
+            try {
+                const fileName = job.jobImage.split('/').pop();
+                await supabase.storage
+                    .from('job-images')
+                    .remove([`job-images/${fileName}`]);
+            } catch (storageError) {
+                console.error('Error deleting job image:', storageError);
+            }
         }
 
         await job.destroy();
         res.status(200).send({ message: 'Job deleted successfully' });
     } catch (error) {
-        console.error('Error deleting job:', error);
-        res.status(500).send({ message: 'Internal server error. Please try again later.' });
+        res.status(500).send({ message: 'Error deleting job.' });
     }
 });
 

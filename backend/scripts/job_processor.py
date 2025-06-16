@@ -1,59 +1,45 @@
-import os
-from pathlib import Path
 import re
 import pytesseract
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageEnhance
 import spacy
-import pandas as pd
 from spellchecker import SpellChecker
 from typing import List, Dict
-import tempfile
 import cv2
 import numpy as np
+from io import BytesIO
+import tempfile
 
 # Initialize NLP tools
 nlp = spacy.load("en_core_web_sm")
 spell = SpellChecker()
 
-# Define paths
-current_script_dir = Path(__file__).parent
-skills_base_path = current_script_dir.parent / "utils" / "skill_data"
-
-def preprocess_image(image_path: str) -> str:
-    """Enhanced image preprocessing for better OCR results"""
+def preprocess_image(image_data: bytes) -> Image.Image:
+    """Enhanced image preprocessing for better OCR results - works with file buffers"""
     try:
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image not found: {image_path}")
-
-        # Create temp file for processed image
-        temp_dir = tempfile.gettempdir()
-        processed_path = os.path.join(temp_dir, f"processed_{os.path.basename(image_path)}")
+        # Convert bytes to PIL Image
+        img = Image.open(BytesIO(image_data))
         
-        # Open image and convert to numpy array for OpenCV processing
-        with Image.open(image_path) as img:
-            img = img.convert('L')  # Convert to grayscale
-            img_np = np.array(img)
-            
-            # Apply adaptive thresholding
-            img_np = cv2.adaptiveThreshold(
-                img_np, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY, 11, 2
-            )
-            
-            # Apply slight blur to reduce noise
-            img_np = cv2.medianBlur(img_np, 1)
-            
-            # Convert back to PIL Image
-            img = Image.fromarray(img_np)
-            
-            # Enhance contrast
-            enhancer = ImageEnhance.Contrast(img)
-            img = enhancer.enhance(2.0)
-            
-            # Save processed image
-            img.save(processed_path)
-            
-        return processed_path
+        # Convert to grayscale
+        img = img.convert('L')
+        img_np = np.array(img)
+        
+        # Apply adaptive thresholding
+        img_np = cv2.adaptiveThreshold(
+            img_np, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, 11, 2
+        )
+        
+        # Apply slight blur to reduce noise
+        img_np = cv2.medianBlur(img_np, 1)
+        
+        # Convert back to PIL Image
+        processed_img = Image.fromarray(img_np)
+        
+        # Enhance contrast
+        enhancer = ImageEnhance.Contrast(processed_img)
+        processed_img = enhancer.enhance(2.0)
+        
+        return processed_img
         
     except Exception as e:
         print(f'Image preprocessing failed: {e}')
@@ -74,12 +60,9 @@ def clean_text(raw_text: str) -> str:
     
     return cleaned.strip()
 
-def extract_text_from_image(file_path: str) -> str:
-    """Perform OCR with optimized configuration"""
+def extract_text_from_image(img: Image.Image) -> str:
+    """Perform OCR with optimized configuration using PIL Image directly"""
     try:
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
-            
         # Custom configuration for job postings
         custom_config = r'''
             --psm 6
@@ -87,15 +70,11 @@ def extract_text_from_image(file_path: str) -> str:
             -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.,/()&
         '''
         
-        text = pytesseract.image_to_string(
-            Image.open(file_path),
-            config=custom_config
-        )
-        
+        text = pytesseract.image_to_string(img, config=custom_config)
         return clean_text(text)
         
     except Exception as e:
-        print(f'OCR failed for {os.path.basename(file_path)}: {e}')
+        print(f'OCR failed: {e}')
         raise
 
 def extract_job_sections(text: str) -> Dict[str, str]:
@@ -137,55 +116,12 @@ def extract_job_sections(text: str) -> Dict[str, str]:
     
     return sections
 
-def load_skills_databases() -> List[str]:
-    """Load both ESCO and O*NET skills databases"""
-    esco_path = skills_base_path / "esco" / "skills_en.csv"
-    onet_path = skills_base_path / "onet" / "Skills.txt"
-    
-    skills = set()
-    
+def post_job_from_image(image_data: bytes) -> Dict:
+    """Process job posting from image data with enhanced OCR"""
     try:
-        # Load ESCO skills
-        if esco_path.exists():
-            esco_skills = pd.read_csv(esco_path)
-            skills.update(esco_skills['preferredLabel'].str.lower().dropna().tolist())
-        
-        # Load O*NET skills
-        if onet_path.exists():
-            onet_skills = pd.read_csv(onet_path, sep='\t')
-            skills.update(onet_skills['Element Name'].str.lower().dropna().tolist())
-    except Exception as e:
-        print(f"Error loading skills databases: {e}")
-    
-    return list(skills)
-
-def extract_skills(text: str) -> List[str]:
-    """Extract skills from text using NLP and skills databases"""
-    if not hasattr(extract_skills, 'skills_db'):
-        extract_skills.skills_db = load_skills_databases()
-    
-    doc = nlp(text.lower())
-    found_skills = set()
-    
-    # Check for exact matches in skills database
-    for skill in extract_skills.skills_db:
-        if skill in text.lower():
-            found_skills.add(skill)
-    
-    # Check for token matches
-    for token in doc:
-        if not token.is_stop and len(token.text) > 2:
-            if token.text in extract_skills.skills_db:
-                found_skills.add(token.text)
-    
-    return sorted(found_skills)
-
-def post_job_from_image(image_path: str) -> Dict:
-    """Process job posting from image with enhanced OCR"""
-    processed_path = None
-    try:
-        processed_path = preprocess_image(image_path)
-        raw_text = extract_text_from_image(processed_path)
+        # Process image directly from bytes
+        processed_img = preprocess_image(image_data)
+        raw_text = extract_text_from_image(processed_img)
         
         if not raw_text.strip():
             raise ValueError("OCR returned empty text")
@@ -197,11 +133,31 @@ def post_job_from_image(image_path: str) -> Dict:
         skill_source = job_data['qualifications'] if job_data['qualifications'] else job_data['description']
         job_data['skills'] = extract_skills(skill_source)
         
-        # Add image path
-        job_data['job_image'] = f'/uploads/{os.path.basename(image_path)}'
+        # Remove local file system references
+        if 'job_image' in job_data:
+            del job_data['job_image']
         
         return job_data
         
-    finally:
-        if processed_path and os.path.exists(processed_path):
-            os.remove(processed_path)
+    except Exception as e:
+        print(f'Error processing job image: {e}')
+        raise
+
+# For command line usage (maintained for backward compatibility)
+if __name__ == "__main__":
+    import sys
+    import json
+    
+    if len(sys.argv) < 2:
+        print("Usage: python job_processor.py <image_path>")
+        sys.exit(1)
+    
+    try:
+        # Temporary fallback for file path usage
+        with open(sys.argv[1], 'rb') as f:
+            image_data = f.read()
+        result = post_job_from_image(image_data)
+        print(json.dumps(result))
+    except Exception as e:
+        print(json.dumps({"error": str(e)}))
+        sys.exit(1)
