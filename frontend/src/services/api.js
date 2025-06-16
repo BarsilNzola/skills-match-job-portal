@@ -119,19 +119,62 @@ export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 
 export const postJobFromImage = async (file) => {
+    // Validate file before sending
+    if (!file) {
+        throw new Error('No file provided');
+    }
+
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+        throw new Error('Invalid file type. Only JPEG, PNG, or WebP allowed');
+    }
+
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File size exceeds 5MB limit');
+    }
+
     const formData = new FormData();
-    formData.append('jobImage', file);  // Must match backend field name
-    
-    return api.post('/api/admin/post-job', formData) // Remove headers config
-        .then(response => response.data)
-        .catch(error => {
-            console.error('Upload Error Details:', {
-                status: error.response?.status,
-                data: error.response?.data,
-                headers: error.response?.headers
-            });
-            throw error;
+    formData.append('jobImage', file);
+
+    try {
+        const response = await api.post('/api/admin/post-job', formData, {
+            // Let browser set Content-Type automatically with boundary
+            headers: {
+                // Only include auth header if needed
+                // 'Authorization': `Bearer ${yourToken}`
+            },
+            timeout: 30000, // 30 second timeout
         });
+
+        return response.data;
+    } catch (error) {
+        console.error('Upload Error:', {
+            status: error.response?.status,
+            data: error.response?.data,
+            config: error.config,
+            fileInfo: {
+                name: file.name,
+                type: file.type,
+                size: file.size
+            }
+        });
+
+        // Create more helpful error messages
+        let errorMessage = 'Upload failed';
+        if (error.response) {
+            if (error.response.status === 400) {
+                errorMessage = error.response.data.error || 'Invalid request';
+            } else if (error.response.status === 413) {
+                errorMessage = 'File too large';
+            }
+        } else if (error.code === 'ECONNABORTED') {
+            errorMessage = 'Request timed out';
+        }
+
+        throw new Error(`${errorMessage} (${file.name})`);
+    }
 };
 
 export const postJobManual = (jobData) => {
