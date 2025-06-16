@@ -1,119 +1,198 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { fetchJobs, deleteJob, updateJob } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Container, Row, Col, Card, Button, Modal, Form, Spinner, Alert } from 'react-bootstrap';
-import { FaSearch, FaMapMarkerAlt } from 'react-icons/fa'; // Import icons
+import { FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
 import '../styles/jobPage.css';
 
 const JobPage = () => {
-    const { user } = useAuth(); // Directly access context
-    const [jobs, setJobs] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [location, setLocation] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    // State for job details modal
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
-    const [selectedJob, setSelectedJob] = useState(null);
-
-    // Edit Modal State
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editJobData, setEditJobData] = useState({
-        id: '',
-        title: '',
-        company: '',
+    const { user } = useAuth();
+    const [state, setState] = useState({
+        jobs: [],
+        searchTerm: '',
         location: '',
-        description: '',
+        loading: true,
+        error: null,
+        showDetailsModal: false,
+        selectedJob: null,
+        showEditModal: false,
+        editJobData: {
+            id: '',
+            title: '',
+            company: '',
+            location: '',
+            description: '',
+        }
     });
 
-    useEffect(() => {
-        const getJobs = async () => {
-            try {
-                const response = await fetchJobs();
-                setJobs(response.data);
-            } catch (error) {
-                console.error('Error fetching jobs:', error);
-                setError('Failed to load jobs. Please try again.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        getJobs();
+    // Fetch jobs with useCallback to memoize the function
+    const getJobs = useCallback(async () => {
+        try {
+            setState(prev => ({ ...prev, loading: true, error: null }));
+            const response = await fetchJobs();
+            setState(prev => ({ ...prev, jobs: response.data }));
+        } catch (error) {
+            console.error('Error fetching jobs:', error);
+            setState(prev => ({ ...prev, error: 'Failed to load jobs. Please try again.' }));
+        } finally {
+            setState(prev => ({ ...prev, loading: false }));
+        }
     }, []);
 
-    const handleSearch = (event) => setSearchTerm(event.target.value);
-    const handleLocationChange = (event) => setLocation(event.target.value);
+    useEffect(() => {
+        getJobs();
+    }, [getJobs]);
+
+    // Event handlers
+    const handleSearch = (e) => setState(prev => ({ ...prev, searchTerm: e.target.value }));
+    const handleLocationChange = (e) => setState(prev => ({ ...prev, location: e.target.value }));
 
     const handleDeleteJob = async (jobId) => {
         if (!window.confirm('Are you sure you want to delete this job?')) return;
 
         try {
             await deleteJob(jobId);
-            setJobs(jobs.filter(job => job.id !== jobId)); // Remove from UI
+            setState(prev => ({
+                ...prev,
+                jobs: prev.jobs.filter(job => job.id !== jobId)
+            }));
         } catch (error) {
             console.error('Error deleting job', error);
         }
     };
 
-    // Open View Details Modal
     const handleViewDetails = (job) => {
-        setSelectedJob(job);
-        setShowDetailsModal(true);
+        setState(prev => ({
+            ...prev,
+            selectedJob: job,
+            showDetailsModal: true
+        }));
     };
 
-    // Open Edit Modal
     const handleEditClick = (job) => {
-        setEditJobData({
-            id: job.id,
-            title: job.title,
-            company: job.company,
-            location: job.location,
-            description: job.description,
-        });
-        setShowEditModal(true);
+        setState(prev => ({
+            ...prev,
+            editJobData: {
+                id: job.id,
+                title: job.title,
+                company: job.company,
+                location: job.location,
+                description: job.description,
+            },
+            showEditModal: true
+        }));
     };
 
-    // Handle Form Input Change
     const handleEditChange = (e) => {
-        setEditJobData({ ...editJobData, [e.target.name]: e.target.value });
+        setState(prev => ({
+            ...prev,
+            editJobData: {
+                ...prev.editJobData,
+                [e.target.name]: e.target.value
+            }
+        }));
     };
 
-    // Submit Edited Job Data
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         try {
-            await updateJob(editJobData.id, editJobData);
-            setJobs(prevJobs =>
-                prevJobs.map(job => (job.id === editJobData.id ? { ...job, ...editJobData } : job))
-            );
-            setShowEditModal(false);
+            await updateJob(state.editJobData.id, state.editJobData);
+            setState(prev => ({
+                ...prev,
+                jobs: prev.jobs.map(job => 
+                    job.id === state.editJobData.id ? { ...job, ...state.editJobData } : job
+                ),
+                showEditModal: false
+            }));
             alert('Job updated successfully!');
         } catch (error) {
             console.error('Error updating job:', error);
         }
     };
 
-    const filteredJobs = jobs.filter(job =>
-        (job.title && job.title.toLowerCase().includes(searchTerm.toLowerCase())) &&
-        (job.location ? job.location.toLowerCase().includes(location.toLowerCase()) : true)
+    // Filter jobs based on search criteria
+    const filteredJobs = state.jobs.filter(job =>
+        (job.title && job.title.toLowerCase().includes(state.searchTerm.toLowerCase())) &&
+        (job.location ? job.location.toLowerCase().includes(state.location.toLowerCase()) : true)
+    );
+
+    // Render job card
+    const renderJobCard = (job) => (
+        <Card key={job.id} className="h-100">
+            <div className="card-img-container">
+                <Card.Img
+                    variant="top"
+                    src={job.jobImage || '/placeholder-image.jpg'}
+                    alt="Job Advert"
+                    className="card-img-top"
+                    onError={(e) => {
+                        e.target.src = '/placeholder-image.jpg';
+                    }}
+                />
+            </div>
+            <Card.Body className="text-center d-flex flex-column">
+                <Card.Title>{job.title}</Card.Title>
+                <Card.Subtitle className="mb-2 text-muted">{job.company}</Card.Subtitle>
+                <Card.Text className="flex-grow-1">
+                    {job.location && (
+                        <span className="d-block mb-2">
+                            <FaMapMarkerAlt className="me-1" />
+                            {job.location}
+                        </span>
+                    )}
+                </Card.Text>
+                <Button 
+                    variant="info" 
+                    onClick={() => handleViewDetails(job)}
+                    className="mt-auto"
+                >
+                    View Details
+                </Button>
+
+                {user?.role?.toLowerCase() === 'admin' && (
+                    <div className="mt-2 d-flex justify-content-center gap-2">
+                        <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm('Delete this job?')) {
+                                    handleDeleteJob(job.id);
+                                }
+                            }}
+                        >
+                            Delete
+                        </Button>
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditClick(job);
+                            }}
+                        >
+                            Edit
+                        </Button>
+                    </div>
+                )}
+            </Card.Body>
+        </Card>
     );
 
     return (
-        <Container fluid className='jobs-container'>
-            <h1 className="my-4 text-center">Job Listings</h1>
+        <Container fluid className="jobs-container py-4">
+            <h1 className="text-center mb-4">Job Listings</h1>
 
             {/* Search and Filter Section */}
-            <Row className="mb-4">
-                <Col md={6} className="mb-3">
+            <Row className="mb-4 g-3">
+                <Col md={6}>
                     <div className="search-input">
                         <FaSearch className="search-icon" />
                         <input
                             type="text"
                             className="form-control"
                             placeholder="Search by skill or title"
-                            value={searchTerm}
+                            value={state.searchTerm}
                             onChange={handleSearch}
                         />
                     </div>
@@ -124,8 +203,8 @@ const JobPage = () => {
                         <input
                             type="text"
                             className="form-control"
-                            placeholder="Location"
-                            value={location}
+                            placeholder="Filter by location"
+                            value={state.location}
                             onChange={handleLocationChange}
                         />
                     </div>
@@ -133,166 +212,135 @@ const JobPage = () => {
             </Row>
 
             {/* Job Listings */}
-            {loading ? (
-                <div className="d-flex justify-content-center">
-                    <Spinner animation="border" />
+            {state.loading ? (
+                <div className="d-flex justify-content-center my-5">
+                    <Spinner animation="border" variant="primary" />
                 </div>
-            ) : error ? (
-                <Alert variant="danger" className="text-center">{error}</Alert>
+            ) : state.error ? (
+                <Alert variant="danger" className="text-center">
+                    {state.error}
+                </Alert>
+            ) : filteredJobs.length === 0 ? (
+                <Alert variant="info" className="text-center">
+                    No jobs found matching your criteria
+                </Alert>
             ) : (
-                <Row>
-                    {filteredJobs.map(job => (
-                        <Col key={job.id} md={4} className="mb-4">
-                            <Card>
-                                <div className="card-img-container">
-                                    <Card.Img
-                                        variant="top"
-                                        src={job.jobImage ? `http://localhost:5000${job.jobImage}` : `http://localhost:5000/uploads/placeholder-image.jpg`}
-                                        alt="Job Advert"
-                                        className="card-img-top"
-                                        onError={(e) => {
-                                            if (e.target.src !== `http://localhost:5000/uploads/placeholder-image.jpg`) {
-                                                e.target.src = `http://localhost:5000/uploads/placeholder-image.jpg`;
-                                            }
-                                        }}
-                                    />
-                                </div>
-                                <Card.Body className="text-center">
-                                    <Button variant="info" onClick={() => handleViewDetails(job)}>
-                                        View Details
-                                    </Button>
-
-                                    {/* Enhanced admin check with multiple verification layers */}
-                                    {(user && user.role && String(user.role).toLowerCase() === 'admin') && (
-                                        <div 
-                                        className="mt-2"
-                                        style={{
-                                            padding: '5px'
-                                        }}
-                                        >
-                                        <Button
-                                            variant="danger"
-                                            onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (window.confirm('Delete this job?')) {
-                                                handleDeleteJob(job.id);
-                                            }
-                                            }}
-                                            className="me-2"
-                                        >
-                                            Delete
-                                        </Button>
-                                        <Button
-                                            variant="primary"
-                                            onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditClick(job);
-                                            }}
-                                        >
-                                            Edit
-                                        </Button>
-                                        </div>
-                                    )}
-                                    </Card.Body>
-                            </Card>
-                        </Col>
-                    ))}
+                <Row xs={1} md={2} lg={3} className="g-4">
+                    {filteredJobs.map(renderJobCard)}
                 </Row>
             )}
 
             {/* Job Details Modal */}
-            <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
-                <Modal.Header closeButton className="modal-header-custom">
-                    <Modal.Title>{selectedJob?.title || 'Job Details'}</Modal.Title>
+            <Modal 
+                show={state.showDetailsModal} 
+                onHide={() => setState(prev => ({ ...prev, showDetailsModal: false }))} 
+                size="lg"
+                centered
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>{state.selectedJob?.title || 'Job Details'}</Modal.Title>
                 </Modal.Header>
-                <Modal.Body className="modal-body-custom">
-                    {selectedJob && (
+                <Modal.Body>
+                    {state.selectedJob && (
                         <div className="job-details-container">
-                            {/* Job Image */}
                             <div className="job-image-container mb-4">
                                 <img
-                                    src={
-                                        selectedJob.jobImage
-                                            ? selectedJob.jobImage.startsWith('http')
-                                                ? selectedJob.jobImage
-                                                : `http://localhost:5000${selectedJob.jobImage}`
-                                            : 'http://localhost:5000/uploads/placeholder-image.jpg'
-                                    }
-                                    alt={selectedJob.title}
-                                    className="job-detail-image"
+                                    src={state.selectedJob.jobImage || '/placeholder-image.jpg'}
+                                    alt={state.selectedJob.title}
+                                    className="img-fluid rounded"
                                     onError={(e) => {
-                                        e.target.src = 'http://localhost:5000/uploads/placeholder-image.jpg';
+                                        e.target.src = '/placeholder-image.jpg';
                                     }}
                                 />
-                            </div>  
+                            </div>
+                            <div className="job-meta mb-3">
+                                <h5>{state.selectedJob.company}</h5>
+                                {state.selectedJob.location && (
+                                    <p className="text-muted">
+                                        <FaMapMarkerAlt className="me-1" />
+                                        {state.selectedJob.location}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="job-description">
+                                <h6>Description:</h6>
+                                <p>{state.selectedJob.description}</p>
+                            </div>
                         </div>
                     )}
                 </Modal.Body>
-                <Modal.Footer className="modal-footer-custom">
-                    <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+                <Modal.Footer>
+                    <Button 
+                        variant="secondary" 
+                        onClick={() => setState(prev => ({ ...prev, showDetailsModal: false }))}
+                    >
                         Close
                     </Button>
                 </Modal.Footer>
             </Modal>
 
             {/* Edit Modal */}
-            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
-                <Modal.Header closeButton className="modal-header-custom">
+            <Modal 
+                show={state.showEditModal} 
+                onHide={() => setState(prev => ({ ...prev, showEditModal: false }))}
+                centered
+            >
+                <Modal.Header closeButton>
                     <Modal.Title>Edit Job Details</Modal.Title>
                 </Modal.Header>
-                <Modal.Body className="modal-body-custom">
+                <Modal.Body>
                     <Form onSubmit={handleEditSubmit}>
                         <Form.Group className="mb-3">
-                            <Form.Label className="form-label-custom">Title</Form.Label>
+                            <Form.Label>Title</Form.Label>
                             <Form.Control 
                                 type="text" 
                                 name="title" 
-                                value={editJobData.title} 
+                                value={state.editJobData.title} 
                                 onChange={handleEditChange} 
                                 required 
-                                className="form-control-custom"
                             />
                         </Form.Group>
                         <Form.Group className="mb-3">
-                            <Form.Label className="form-label-custom">Company</Form.Label>
+                            <Form.Label>Company</Form.Label>
                             <Form.Control 
                                 type="text" 
                                 name="company" 
-                                value={editJobData.company} 
+                                value={state.editJobData.company} 
                                 onChange={handleEditChange} 
                                 required 
-                                className="form-control-custom"
                             />
                         </Form.Group>
                         <Form.Group className="mb-3">
-                            <Form.Label className="form-label-custom">Location</Form.Label>
+                            <Form.Label>Location</Form.Label>
                             <Form.Control 
                                 type="text" 
                                 name="location" 
-                                value={editJobData.location} 
+                                value={state.editJobData.location} 
                                 onChange={handleEditChange} 
                                 required 
-                                className="form-control-custom"
                             />
                         </Form.Group>
                         <Form.Group className="mb-3">
-                            <Form.Label className="form-label-custom">Description</Form.Label>
+                            <Form.Label>Description</Form.Label>
                             <Form.Control 
                                 as="textarea" 
-                                rows={3} 
+                                rows={5} 
                                 name="description" 
-                                value={editJobData.description} 
+                                value={state.editJobData.description} 
                                 onChange={handleEditChange} 
                                 required 
-                                className="form-control-custom"
                             />
                         </Form.Group>
                         <div className="d-flex gap-2">
-                            <Button variant="success" type="submit" className="flex-grow-1">
+                            <Button variant="primary" type="submit" className="flex-grow-1">
                                 Save Changes
                             </Button>
-                            <Button variant="secondary" onClick={() => setShowEditModal(false)} className="flex-grow-1">
-                                Close
+                            <Button 
+                                variant="outline-secondary" 
+                                onClick={() => setState(prev => ({ ...prev, showEditModal: false }))}
+                                className="flex-grow-1"
+                            >
+                                Cancel
                             </Button>
                         </div>
                     </Form>
