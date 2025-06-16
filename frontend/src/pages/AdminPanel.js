@@ -1,6 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { postJobFromImage, postJobManual } from '../services/api';
-import React, { useRef } from 'react';
 import { Button, Form, Alert, Spinner, Card, Badge } from 'react-bootstrap';
 import '../styles/adminpanel.css';
 
