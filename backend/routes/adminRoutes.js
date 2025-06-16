@@ -13,32 +13,20 @@ const router = express.Router();
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
-        files: 1, // Allow only 1 file
-        fields: 8 // Don't allow non-file fields
+      fileSize: 5 * 1024 * 1024, // 5MB
     },
     fileFilter: (req, file, cb) => {
-        // Log detailed file info
-        console.log('File upload attempt:', {
-            originalname: file.originalname,
-            mimetype: file.mimetype,
-            size: file.size + ' bytes'
-        });
-
-        // Validate file type
-        const validMimes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
-        const isValidType = validMimes.includes(file.mimetype);
-        const isValidExt = ['.jpg', '.jpeg', '.png', '.webp']
-            .includes(path.extname(file.originalname).toLowerCase());
-
-        if (!isValidType || !isValidExt) {
-            console.error('Invalid file type rejected:', file.mimetype);
-            return cb(new Error('Only JPEG, PNG, or WebP images are allowed'), false);
-        }
-
-        cb(null, true);
+      const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      
+      if (!validExtensions.includes(ext)) {
+        return cb(new Error('Invalid file extension'), false);
+      }
+      
+      // If we got this far, the file is valid
+      cb(null, true);
     }
-}).single('jobImage'); // Critical: Use .single() with your exact field name
+}).single('jobImage');
 
 // Admin route to post a job from an image
 router.post('/post-job', 

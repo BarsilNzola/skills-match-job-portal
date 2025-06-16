@@ -119,61 +119,33 @@ export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 
 export const postJobFromImage = async (file) => {
-    // Validate file before sending
-    if (!file) {
-        throw new Error('No file provided');
+    // Enhanced validation
+    const validExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    const extension = file.name.split('.').pop().toLowerCase();
+    
+    if (!validExtensions.includes(extension)) {
+      throw new Error(`Invalid file extension. Allowed: ${validExtensions.join(', ')}`);
     }
-
-    // Check file type
-    const validTypes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-        throw new Error('Invalid file type. Only JPEG, PNG, or WebP allowed');
-    }
-
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-        throw new Error('File size exceeds 5MB limit');
-    }
-
+  
+    // Create FormData
     const formData = new FormData();
     formData.append('jobImage', file);
-
+  
     try {
-        const response = await api.post('/api/admin/post-job', formData, {
-            // Let browser set Content-Type automatically with boundary
-            headers: {
-                // Only include auth header if needed
-                // 'Authorization': `Bearer ${yourToken}`
-            },
-            timeout: 30000, // 30 second timeout
-        });
-
-        return response.data;
+      const response = await api.post('/api/admin/post-job', formData);
+      return response.data;
     } catch (error) {
-        console.error('Upload Error:', {
-            status: error.response?.status,
-            data: error.response?.data,
-            config: error.config,
-            fileInfo: {
-                name: file.name,
-                type: file.type,
-                size: file.size
-            }
-        });
-
-        // Create more helpful error messages
-        let errorMessage = 'Upload failed';
-        if (error.response) {
-            if (error.response.status === 400) {
-                errorMessage = error.response.data.error || 'Invalid request';
-            } else if (error.response.status === 413) {
-                errorMessage = 'File too large';
-            }
-        } else if (error.code === 'ECONNABORTED') {
-            errorMessage = 'Request timed out';
+      console.error('Upload error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        fileInfo: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          extension: extension
         }
-
-        throw new Error(`${errorMessage} (${file.name})`);
+      });
+      throw new Error(error.response?.data?.error || 'Upload failed');
     }
 };
 
