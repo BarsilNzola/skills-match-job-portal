@@ -24,32 +24,6 @@ const upload = multer({
 
 const DEFAULT_IMAGE_URL = '/uploads/placeholder-image.jpg';
 
-// function to call Python OCR processor
-async function postJobFromImage(imageBuffer) {
-    return new Promise((resolve, reject) => {
-        const pythonScriptPath = path.join(__dirname, '../scripts/job_processor.py');
-        
-        // Pass the buffer directly to Python via stdin
-        const pythonProcess = exec(`python ${pythonScriptPath}`, (error, stdout, stderr) => {
-            if (error) {
-                console.error('Python OCR error:', error);
-                return reject(new Error('Failed to process job image'));
-            }
-            
-            try {
-                const result = JSON.parse(stdout);
-                resolve(result);
-            } catch (parseError) {
-                reject(new Error('Invalid OCR processing result'));
-            }
-        });
-        
-        // Write the image buffer to Python's stdin
-        pythonProcess.stdin.write(imageBuffer);
-        pythonProcess.stdin.end();
-    });
-}
-
 router.post(
     '/post-job',
     authMiddleware,
