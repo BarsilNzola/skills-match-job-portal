@@ -11,34 +11,44 @@ const router = express.Router();
 // Set up multer for memory storage (no disk storage needed)
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed!'), false);
+        }
+    }
 });
 
 // Admin route to post a job from an image
 router.post(
     '/post-job',
-    authMiddleware,
-    adminMiddleware,
-    upload.single('jobImage'),
+    authMiddleware,       // Your authentication middleware
+    adminMiddleware,      // Your admin check middleware
+    upload.single('jobImage'), // Must match frontend field name
     async (req, res) => {
         try {
             if (!req.file) {
-                return res.status(400).json({ message: 'No image file uploaded.' });
+                return res.status(400).json({ error: 'No image file provided' });
             }
 
-            // Generate unique filename
-            const fileExt = path.extname(req.file.originalname);
-            const fileName = `job-images/${Date.now()}${fileExt}`;
+            // Process the file (req.file contains the uploaded file)
+            const file = req.file;
             
             // Upload to Supabase
-            const { error: uploadError } = await supabase.storage
+            const fileExt = path.extname(file.originalname);
+            const fileName = `job-images/${Date.now()}${fileExt}`;
+            
+            const { error } = await supabase.storage
                 .from('job-images')
-                .upload(fileName, req.file.buffer, {
-                    contentType: req.file.mimetype,
-                    upsert: true
+                .upload(fileName, file.buffer, {
+                    contentType: file.mimetype,
                 });
 
-            if (uploadError) throw uploadError;
+            if (error) throw error;
 
             // Get public URL
             const { data: { publicUrl } } = supabase.storage
@@ -54,14 +64,15 @@ router.post(
             // Create the job in database
             const job = await Job.create(jobData);
             
-            res.status(200).json({ 
-                message: 'Job successfully posted!', 
-                job 
+            res.json({ 
+                success: true,
+                imageUrl: publicUrl
             });
+
         } catch (error) {
-            console.error('Error posting job:', error);
-            res.status(400).json({ 
-                message: error.message || 'Failed to post job' 
+            console.error('Upload error:', error);
+            res.status(500).json({ 
+                error: error.message || 'Failed to process image'
             });
         }
     }

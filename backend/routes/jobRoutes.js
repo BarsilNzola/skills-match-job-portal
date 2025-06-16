@@ -11,15 +11,18 @@ const { extractSkills } = require('../utils/skills-db');
 const supabase = require('../utils/supabase'); // Add Supabase client
 
 // Remove disk storage and use memory storage instead
-const upload = multer({ 
+const upload = multer({
     storage: multer.memoryStorage(),
-    fileFilter: (req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-            return cb(new Error('Only image files are allowed!'), false);
-        }
-        cb(null, true);
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
     },
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed!'), false);
+        }
+    }
 });
 
 const DEFAULT_IMAGE_URL = '/uploads/placeholder-image.jpg';
