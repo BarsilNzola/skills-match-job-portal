@@ -15,7 +15,7 @@ const upload = multer({
     limits: {
         fileSize: 5 * 1024 * 1024, // 5MB
         files: 1, // Allow only 1 file
-        fields: 0 // Don't allow non-file fields
+        fields: 8 // Don't allow non-file fields
     },
     fileFilter: (req, file, cb) => {
         // Log detailed file info
