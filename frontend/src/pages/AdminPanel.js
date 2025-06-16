@@ -35,14 +35,17 @@ const AdminPanel = () => {
   } = state;
 
   // Handlers
-  const handleImageChange = useCallback((e) => {
-    setState(prev => ({
-      ...prev,
-      jobImage: e.target.files[0],
-      ocrFailed: false,
-      error: null
-    }));
-  }, []);
+  const fileInputRef = useRef();
+
+  const handleImageChange = (e) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    console.log('Selected file:', file);
+    
+    // Store reference
+    fileInputRef.current = file;
+  };
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;

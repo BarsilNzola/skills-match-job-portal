@@ -119,15 +119,16 @@ export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 
 export const postJobFromImage = async (file) => {
-    // Enhanced validation
-    const validExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-    const extension = file.name.split('.').pop().toLowerCase();
+    if (!file) throw new Error('No file provided');
     
+    const fileName = file.name || 'untitled';
+    const extension = fileName.split('.').pop().toLowerCase();
+    const validExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+  
     if (!validExtensions.includes(extension)) {
-      throw new Error(`Invalid file extension. Allowed: ${validExtensions.join(', ')}`);
+      throw new Error(`Invalid file type. Allowed: ${validExtensions.join(', ')}`);
     }
   
-    // Create FormData
     const formData = new FormData();
     formData.append('jobImage', file);
   
@@ -135,17 +136,15 @@ export const postJobFromImage = async (file) => {
       const response = await api.post('/api/admin/post-job', formData);
       return response.data;
     } catch (error) {
-      console.error('Upload error:', {
-        status: error.response?.status,
-        data: error.response?.data,
+      console.error('Upload failed:', {
+        error: error.response?.data,
         fileInfo: {
-          name: file.name,
+          name: fileName,
           type: file.type,
-          size: file.size,
-          extension: extension
+          size: file.size
         }
       });
-      throw new Error(error.response?.data?.error || 'Upload failed');
+      throw error;
     }
 };
 
