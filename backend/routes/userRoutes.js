@@ -5,10 +5,16 @@ const User = require('../models/User'); // Ensure this is the correct path to yo
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');  // Adjust the path if necessary
 const { calculateJobRecommendations } = require('../utils/Recommendation');
 const { convertPdfToDocx, convertDocxToPdf } = require('../utils/conversionUtils');
+const supabase = require('../utils/supabase');
+const { createClient } = require('@supabase/supabase-js');
 
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+  );
 
 const router = express.Router();
-const multer = require('multer');
+const memoryStorage = multer.memoryStorage();
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
@@ -19,20 +25,14 @@ const downloadLimiter = rateLimit({
   message: 'Too many download requests, please try again later'
 });
 
-
-// Configure storage for profile pictures
-const avatarStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/avatars/');
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'avatar-' + req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
+const convertLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // limit each user to 5 conversions per window
+    message: 'Too many conversion requests, please try again later'
 });
 
-const uploadAvatar = multer({ 
-    storage: avatarStorage,
+const uploadAvatar = multer({
+    storage: multer.memoryStorage(), // Store in memory for Supabase upload
     limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|gif/;
@@ -45,30 +45,19 @@ const uploadAvatar = multer({
         cb('Error: Only image files (jpeg, jpg, png, gif) are allowed!');
     }
 });
-
-// CV Upload Config (reuses Multer but with different settings)
-const cvStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, 'uploads/cv/');  // Different folder for CVs
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, 'cv-' + req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
   
-const uploadCV = multer({ 
-    storage: cvStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit (larger for CVs)
+const uploadCV = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req, file, cb) => {
-      const filetypes = /pdf|doc|docx/;  // Only allow CV formats
-      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-      const mimetype = filetypes.test(file.mimetype);
-      
-      if (extname && mimetype) {
-        return cb(null, true);
-      }
-      cb('Error: Only PDF/DOC/DOCX files are allowed!');
+        const filetypes = /pdf|doc|docx/;
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = filetypes.test(file.mimetype);
+        
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb('Error: Only PDF/DOC/DOCX files are allowed!');
     }
 });
 
@@ -193,20 +182,44 @@ router.post('/upload-avatar', authMiddleware, uploadAvatar.single('avatar'), asy
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Delete old avatar if it exists and isn't the default
-        if (user.profileImage && user.profileImage !== 'default-avatar.jpg') {
-            const oldAvatarPath = path.join(__dirname, '../uploads/avatars', user.profileImage);
-            if (fs.existsSync(oldAvatarPath)) {
-                fs.unlinkSync(oldAvatarPath);
+        // Generate unique filename
+        const fileExt = path.extname(req.file.originalname);
+        const avatarPath = `user-avatars/${user.id}/avatar-${Date.now()}${fileExt}`;
+
+        // Upload to Supabase
+        const { error } = await supabase.storage
+            .from('user-avatars')
+            .upload(fileName, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: true
+            });
+
+        if (error) throw error;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from('user-avatars')
+            .getPublicUrl(fileName);
+
+        // Delete old avatar if it exists and isn't default
+        if (user.profileImage && !user.profileImage.includes('default-avatar')) {
+            try {
+                const oldFileName = user.profileImage.split('/').pop();
+                await supabase.storage
+                    .from('user-avatars')
+                    .remove([`avatars/${oldFileName}`]);
+            } catch (deleteError) {
+                console.error('Error deleting old avatar:', deleteError);
             }
         }
 
-        user.profileImage = req.file.filename;
+        // Update user with new avatar URL
+        user.profileImage = publicUrl;
         await user.save();
 
         res.json({ 
             message: 'Profile picture uploaded successfully',
-            profileImage: req.file.filename
+            profileImage: publicUrl
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -216,21 +229,33 @@ router.post('/upload-avatar', authMiddleware, uploadAvatar.single('avatar'), asy
 router.get('/avatar/:userId', async (req, res) => {
     try {
         const user = await User.findByPk(req.params.userId);
+        
+        // 1. If no user or no profile image, use default avatar from Supabase
         if (!user || !user.profileImage) {
-            // Return default avatar if none exists
-            const defaultAvatar = path.join(__dirname, '../uploads/avatars/default-avatar.jpg');
-            return res.sendFile(defaultAvatar);
+            const { data: { publicUrl } } = supabase.storage
+                .from('user-avatars')
+                .getPublicUrl('default-avatar.jpg');
+            return res.redirect(publicUrl);
         }
 
-        const avatarPath = path.join(__dirname, '../uploads/avatars', user.profileImage);
-        if (!fs.existsSync(avatarPath)) {
-            const defaultAvatar = path.join(__dirname, '../uploads/avatars/default-avatar.jpg');
-            return res.sendFile(defaultAvatar);
+        // 2. If profileImage is already a full URL (new Supabase format)
+        if (user.profileImage.startsWith('http')) {
+            return res.redirect(user.profileImage);
         }
 
-        res.sendFile(avatarPath);
+        // 3. If profileImage is a path (legacy format)
+        const { data: { publicUrl } } = supabase.storage
+            .from('user-avatars')
+            .getPublicUrl(user.profileImage);
+        
+        return res.redirect(publicUrl);
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Avatar retrieval error:', error);
+        
+        // Fallback to hardcoded default if Supabase fails
+        const hardcodedDefault = 'https://your-app.com/default-avatar.jpg';
+        return res.redirect(hardcodedDefault);
     }
 });
 
@@ -296,35 +321,57 @@ router.put('/skills', authMiddleware , async (req, res) => {
 // CV upload route
 router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-    }
-  
-    const user = await User.findByPk(req.user.id);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-    }
-  
-    // Delete old CV if it exists
-    if (user.cvFile) {
-        const oldCVPath = path.join(__dirname, '../uploads/cv', user.cvFile);
-        if (fs.existsSync(oldCVPath)) {
-          fs.unlinkSync(oldCVPath);
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
         }
-    }
-  
-    // Update user with new CV
-    user.cvFile = req.file.filename;
-    user.cvFileType = path.extname(req.file.originalname).slice(1); // "pdf", "docx", etc.
-    await user.save();
-  
-      res.json({ 
-        message: 'CV uploaded successfully',
-        filename: req.file.filename,
-        fileType: user.cvFileType
-      });
+
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Generate unique filename
+        const fileExt = path.extname(req.file.originalname);
+        const cvPath = `user-cvs/${user.id}/cv-${Date.now()}${fileExt}`;
+        
+        // Upload to Supabase
+        const { error } = await supabase.storage
+            .from('user-cvs')
+            .upload(fileName, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: true
+            });
+
+        if (error) throw error;
+
+        // Get public URL (you might want to keep this private)
+        const { data: { publicUrl } } = supabase.storage
+            .from('user-cvs')
+            .getPublicUrl(fileName);
+
+        // Delete old CV if it exists
+        if (user.cvFile && user.cvFile.startsWith('cvs/')) {
+            try {
+                await supabase.storage
+                    .from('user-cvs')
+                    .remove([user.cvFile]);
+            } catch (deleteError) {
+                console.error('Error deleting old CV:', deleteError);
+            }
+        }
+
+        // Update user record
+        user.cvFile = fileName; // Store the path, not full URL for more control
+        user.cvFileType = fileExt.replace('.', '');
+        await user.save();
+
+        res.json({ 
+            message: 'CV uploaded successfully',
+            filename: fileName,
+            fileType: user.cvFileType
+        });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -335,28 +382,14 @@ router.get('/download-cv', downloadLimiter, authMiddleware, async (req, res) => 
             return res.status(404).json({ error: 'CV not found' });
         }
 
-        const filePath = path.join(__dirname, '../uploads/cv', user.cvFile);
-        
-        // Add security headers and proper file handling
-        res.setHeader('Content-Disposition', `attachment; filename="${user.cvFile}"`);
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        
-        // Set correct Content-Type based on file extension
-        const fileExt = path.extname(user.cvFile).toLowerCase();
-        const mimeType = fileExt === '.pdf' 
-            ? 'application/pdf' 
-            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        res.setHeader('Content-Type', mimeType);
+        // Get signed URL (expires after 1 hour)
+        const { data, error } = await supabase.storage
+            .from('user-cvs')
+            .createSignedUrl(user.cvFile, 3600); // 1 hour expiration
 
-        // Stream the file
-        const fileStream = fs.createReadStream(filePath);
-        fileStream.pipe(res);
-        
-        fileStream.on('error', (err) => {
-            console.error('File stream error:', err);
-            res.status(500).end();
-        });
-        
+        if (error) throw error;
+
+        res.redirect(data.signedUrl);
     } catch (error) {
         console.error('Download error:', error);
         res.status(500).json({ 
