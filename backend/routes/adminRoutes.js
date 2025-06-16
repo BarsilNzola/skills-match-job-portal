@@ -9,76 +9,108 @@ const supabase = require('../utils/supabase'); // Import Supabase client
 const router = express.Router();
 
 // Set up multer for memory storage (no disk storage needed)
+// 1. Enhanced Multer Configuration
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+        files: 1, // Allow only 1 file
+        fields: 0 // Don't allow non-file fields
+    },
     fileFilter: (req, file, cb) => {
-        console.log('Incoming file:', {
-            name: file.originalname,
+        // Log detailed file info
+        console.log('File upload attempt:', {
+            originalname: file.originalname,
             mimetype: file.mimetype,
-            size: file.size
+            size: file.size + ' bytes'
         });
-        
-        if (!file.mimetype.startsWith('image/')) {
-            console.log('Rejected file type:', file.mimetype);
-            return cb(new Error('Only images allowed'), false);
+
+        // Validate file type
+        const validMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        const isValidType = validMimes.includes(file.mimetype);
+        const isValidExt = ['.jpg', '.jpeg', '.png', '.webp']
+            .includes(path.extname(file.originalname).toLowerCase());
+
+        if (!isValidType || !isValidExt) {
+            console.error('Invalid file type rejected:', file.mimetype);
+            return cb(new Error('Only JPEG, PNG, or WebP images are allowed'), false);
         }
+
         cb(null, true);
     }
-});
+}).single('jobImage'); // Critical: Use .single() with your exact field name
 
 // Admin route to post a job from an image
-router.post(
-    '/post-job',
-    authMiddleware,       // Your authentication middleware
-    adminMiddleware,      // Your admin check middleware
-    upload.single('jobImage'), // Must match frontend field name
-    async (req, res) => {
-        try {
-            if (!req.file) {
-                return res.status(400).json({ error: 'No image file provided' });
+router.post('/post-job', 
+    // Important: No other middleware before Multer
+    (req, res, next) => {
+        console.log('Request headers:', req.headers);
+        console.log('Content-Type:', req.headers['content-type']);
+        next();
+    },
+    
+    // Handle the upload
+    (req, res) => {
+        upload(req, res, async (err) => {
+            if (err) {
+                console.error('Upload error:', {
+                    message: err.message,
+                    stack: err.stack
+                });
+                return res.status(400).json({ 
+                    error: err.message,
+                    details: {
+                        code: err.code,
+                        field: err.field
+                    }
+                });
             }
 
-            // Process the file (req.file contains the uploaded file)
-            const file = req.file;
-            
-            // Upload to Supabase
-            const fileExt = path.extname(file.originalname);
-            const fileName = `job-images/${Date.now()}${fileExt}`;
-            
-            const { error } = await supabase.storage
-                .from('job-images')
-                .upload(fileName, file.buffer, {
-                    contentType: file.mimetype,
+            if (!req.file) {
+                console.error('No file received. Request body:', req.body);
+                return res.status(400).json({
+                    error: 'No file provided',
+                    received: {
+                        files: req.files,
+                        bodyKeys: Object.keys(req.body)
+                    }
+                });
+            }
+
+            // File successfully received
+            console.log('Upload successful:', {
+                filename: req.file.originalname,
+                size: req.file.size,
+                bufferLength: req.file.buffer.length
+            });
+
+            // Process the file (upload to Supabase, etc.)
+            try {
+                const fileExt = path.extname(req.file.originalname);
+                const fileName = `jobs/${Date.now()}${fileExt}`;
+                
+                const { error } = await supabase.storage
+                    .from('job-images')
+                    .upload(fileName, req.file.buffer, {
+                        contentType: req.file.mimetype,
+                        upsert: false
+                    });
+
+                if (error) throw error;
+
+                res.json({ 
+                    success: true,
+                    filename: fileName
                 });
 
-            if (error) throw error;
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('job-images')
-                .getPublicUrl(fileName);
-
-            // Process the image (using your Python OCR script)
-            const jobData = await postJobFromImage(req.file.buffer);
-            
-            // Add the image URL to job data
-            jobData.jobImage = publicUrl;
-
-            // Create the job in database
-            const job = await Job.create(jobData);
-            
-            res.json({ 
-                success: true,
-                imageUrl: publicUrl
-            });
-
-        } catch (error) {
-            console.error('Upload error:', error);
-            res.status(500).json({ 
-                error: error.message || 'Failed to process image'
-            });
-        }
+            } catch (storageError) {
+                console.error('Supabase upload failed:', storageError);
+                res.status(500).json({
+                    error: 'File storage failed',
+                    details: storageError.message
+                });
+            }
+        });
     }
 );
 
