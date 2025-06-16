@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { postJobFromImage, postJobManual } from '../services/api';
+import { postJobFromImage, postJobManual, api } from '../services/api';
 import { Button, Form, Alert, Spinner, Card, Badge } from 'react-bootstrap';
 import '../styles/adminpanel.css';
 
@@ -42,30 +42,27 @@ const AdminPanel = () => {
     if (!file) return;
   
     try {
-      console.log('Uploading file:', { 
+      console.log('Uploading file:', {
         name: file.name,
         type: file.type,
-        size: file.size 
+        size: file.size
       });
   
-      // Create clean FormData (important!)
       const formData = new FormData();
-      formData.append('jobImage', file);  // Must match backend field name
-      
-      // Ensure no other headers are interfering
-      const response = await api.post('/api/admin/post-job', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      formData.append('jobImage', file); // Must match backend exactly
   
+      // Clean API call - no headers needed
+      const response = await api.post('/admin/post-job', formData);
+      
       console.log('Upload success:', response.data);
+      return response.data;
     } catch (error) {
       console.error('Upload failed:', {
         status: error.response?.status,
         data: error.response?.data,
-        error: error.message
+        config: error.config
       });
+      throw error;
     }
   };
 
