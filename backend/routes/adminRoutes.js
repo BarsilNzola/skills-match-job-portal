@@ -25,7 +25,7 @@ const upload = multer({
 }).single('jobImage');
 
 // Admin route to post a job from an image
-router.post('/post-job', 
+router.post('/admin/post-job', 
     // Important: No other middleware before Multer
     (req, res, next) => {
         console.log('Request headers:', req.headers);

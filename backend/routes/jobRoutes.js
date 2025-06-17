@@ -28,7 +28,7 @@ const upload = multer({
 const DEFAULT_IMAGE_URL = '/uploads/placeholder-image.jpg';
 
 router.post(
-    '/post-job',
+    '/admin/post-job',
     authMiddleware,
     adminMiddleware,
     upload,
