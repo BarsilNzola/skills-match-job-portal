@@ -52,7 +52,7 @@ const AdminPanel = () => {
       formData.append('jobImage', file); // Must match backend exactly
   
       // Clean API call - no headers needed
-      const response = await api.post('/admin/post-job', formData);
+      const response = await api.post('/admin/jobs', formData);
       
       console.log('Upload success:', response.data);
       return response.data;
