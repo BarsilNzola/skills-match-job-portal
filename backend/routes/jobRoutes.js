@@ -31,7 +31,7 @@ router.post(
     '/post-job',
     authMiddleware,
     adminMiddleware,
-    upload.single('jobImage'),
+    upload,
     async (req, res) => {
         try {
             let jobData;
