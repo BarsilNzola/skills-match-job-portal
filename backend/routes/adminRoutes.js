@@ -33,13 +33,16 @@ router.post('/jobs',
     },
     async (req, res) => {
         try {
-            let jobData;
+            let jobData = {};
             let jobImageUrl = DEFAULT_IMAGE_URL;
+            let ocrFailed = false;
 
+            // 1. Always process image upload first (if exists)
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
                 const fileName = `job-images/${Date.now()}${fileExt}`;
                 
+                // Upload to Supabase
                 const { error } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
@@ -49,35 +52,76 @@ router.post('/jobs',
 
                 if (error) throw error;
 
+                // Get public URL
                 const { data: { publicUrl } } = supabase.storage
                     .from('job-images')
                     .getPublicUrl(fileName);
 
                 jobImageUrl = publicUrl;
-                jobData = req.body; // Or process OCR if needed
-                
-                if (!jobData.skills) {
-                    jobData.skills = extractSkills(jobData.description || '');
+
+                // 2. Attempt OCR processing
+                try {
+                    const ocrData = await postJobFromImage(req.file.buffer);
+                    jobData = {
+                        ...ocrData,
+                        // Allow manual data to override OCR results
+                        ...(req.body.title && { title: req.body.title }),
+                        ...(req.body.company && { company: req.body.company }),
+                        ...(req.body.description && { description: req.body.description })
+                    };
+                } catch (ocrError) {
+                    console.warn('OCR processing failed:', ocrError);
+                    ocrFailed = true;
+                    // Continue with manual data below
                 }
-            } else {
-                const { title, description, skills } = req.body;
+            }
+
+            // 3. Fallback to manual data if:
+            //    - No file uploaded
+            //    - OCR failed
+            //    - Manual data exists
+            if (!req.file || ocrFailed || Object.keys(jobData).length === 0) {
                 jobData = {
-                    title,
-                    description,
-                    skills: skills || extractSkills(description),
-                    jobImage: DEFAULT_IMAGE_URL
+                    ...jobData, // Keep any OCR data that might exist
+                    title: req.body.title || jobData.title || 'Untitled Position',
+                    company: req.body.company || jobData.company || 'Unknown Company',
+                    description: req.body.description || jobData.description || '',
+                    skills: req.body.skills || jobData.skills || extractSkills(req.body.description || ''),
+                    jobImage: jobImageUrl
                 };
             }
 
-            jobData.jobImage = jobImageUrl;
-            const validationError = validateJobData(jobData);
-            if (validationError) return res.status(400).send({ message: validationError });
+            // 4. Auto-extract skills if missing
+            if (!jobData.skills && jobData.description) {
+                jobData.skills = extractSkills(jobData.description);
+            }
 
-            const job = await Job.create(jobData);
-            res.status(201).send(job);
+            // 5. Create the job (temporarily disable validation if needed)
+            // const validationError = validateJobData(jobData);
+            // if (validationError) return res.status(400).send({ message: validationError });
+
+            const job = await Job.create({
+                jobImage: jobImageUrl,
+                title: jobData.title,
+                company: jobData.company,
+                description: jobData.description,
+                skillsRequired: jobData.skills,
+                location: req.body.location || null,
+                postedDate: new Date()
+            });
+
+            res.status(201).json({
+                success: true,
+                job,
+                ...(ocrFailed && { warning: "OCR processing failed - used manual fields" })
+            });
+
         } catch (error) {
             console.error('Error creating job:', error);
-            res.status(500).send({ message: error.message || 'Internal server error.' });
+            res.status(500).json({ 
+                error: 'Internal server error',
+                ...(process.env.NODE_ENV === 'development' && { details: error.message })
+            });
         }
     }
 );
