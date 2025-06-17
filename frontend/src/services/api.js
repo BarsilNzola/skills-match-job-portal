@@ -133,7 +133,7 @@ export const postJobFromImage = async (file) => {
     formData.append('jobImage', file);
   
     try {
-      const response = await api.post('/api/admin/post-job', formData);
+      const response = await api.post('/api/admin/jobs', formData);
       return response.data;
     } catch (error) {
       console.error('Upload failed:', {
@@ -149,7 +149,7 @@ export const postJobFromImage = async (file) => {
 };
 
 export const postJobManual = (jobData) => {
-    return api.post('/api/admin/post-job', jobData, {
+    return api.post('/api/admin/jobs', jobData, {
         headers: {
             'Content-Type': 'application/json',
         },
@@ -158,8 +158,8 @@ export const postJobManual = (jobData) => {
     .catch(handleApiError);
 };
 
-export const deleteJob = (id) => api.delete(`/jobs/${id}`).catch(handleApiError);
-export const updateJob = (id, jobData) => api.put(`/jobs/${id}`, jobData).catch(handleApiError);
+export const deleteJob = (id) => api.delete(`api/admin/jobs/${id}`).catch(handleApiError);
+export const updateJob = (id, jobData) => api.put(`api/admin/jobs/${id}`, jobData).catch(handleApiError);
 
 // Application-related API functions
 export const applyForJob = (applicationData) => api.post('/applications', applicationData).catch(handleApiError);
