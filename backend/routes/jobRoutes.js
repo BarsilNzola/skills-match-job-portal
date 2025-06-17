@@ -131,7 +131,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-router.put('/:id', authMiddleware, adminMiddleware, upload.single('jobImage'), async (req, res) => {
+router.put('/:id', authMiddleware, adminMiddleware, upload, async (req, res) => {
     try {
         const { id } = req.params;
         const job = await Job.findByPk(id);
