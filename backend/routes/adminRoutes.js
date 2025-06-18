@@ -4,14 +4,16 @@ const path = require('path');
 const router = express.Router();
 const Job = require('../models/Job');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { extractSkills, validateJobData } = require('../utils/Validator');
+const { extractSkills } = require('../utils/skills-db');
+const { validateJobData } = require('../utils/Validator');
+const { postJobFromImage } = require('../utils/jobImageProcessor');
 const supabase = require('../utils/supabase');
 const DEFAULT_IMAGE_PATH = null;
 
 // Multer config
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -37,6 +39,7 @@ router.post('/jobs',
             let uploadedImagePath = DEFAULT_IMAGE_PATH;
             let ocrFailed = false;
 
+            // Upload image to Supabase if provided
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
                 const fileName = `job-${Date.now()}${fileExt}`;
@@ -69,7 +72,7 @@ router.post('/jobs',
                 }
             }
 
-            // OCR logic
+            // OCR logic (if file present)
             if (req.file) {
                 try {
                     const ocrData = await postJobFromImage(req.file.buffer);
@@ -77,7 +80,7 @@ router.post('/jobs',
                         ...ocrData,
                         ...(req.body.title && { title: req.body.title }),
                         ...(req.body.company && { company: req.body.company }),
-                        ...(req.body.description && { description: req.body.description })
+                        ...(req.body.description && { description: req.body.description }),
                     };
                 } catch (ocrError) {
                     console.warn('⚠️ OCR processing failed:', ocrError);
@@ -85,21 +88,32 @@ router.post('/jobs',
                 }
             }
 
-            // Fallback fields
+            // Fallback if OCR fails or no image
             if (!req.file || ocrFailed || Object.keys(jobData).length === 0) {
                 jobData = {
-                    ...jobData,
                     title: req.body.title || 'Untitled Position',
                     company: req.body.company || 'Unknown Company',
                     description: req.body.description || '',
-                    skills: req.body.skills || extractSkills(req.body.description || ''),
                 };
             }
 
+            // Skills extraction
             if (!jobData.skills && jobData.description) {
-                jobData.skills = extractSkills(jobData.description);
+                try {
+                    jobData.skills = extractSkills(jobData.description);
+                } catch (e) {
+                    console.warn('⚠️ Skill extraction failed:', e.message);
+                    jobData.skills = [];
+                }
             }
 
+            // Validate job data before saving
+            const { isValid, errors } = validateJobData(jobData);
+            if (!isValid) {
+                return res.status(400).json({ success: false, errors });
+            }
+
+            // Final job creation
             const job = await Job.create({
                 jobImage: uploadedImagePath,
                 title: jobData.title,
@@ -115,7 +129,7 @@ router.post('/jobs',
             res.status(201).json({
                 success: true,
                 job,
-                ...(ocrFailed && { warning: 'OCR processing failed - used manual fields' })
+                ...(ocrFailed && { warning: 'OCR processing failed - used manual fields' }),
             });
         } catch (error) {
             console.error('❌ Error creating job:', error);
@@ -138,7 +152,7 @@ router.put('/jobs/:id',
         try {
             const { id } = req.params;
             const job = await Job.findByPk(id);
-            if (!job) return res.status(404).send({ message: 'Job not found' });
+            if (!job) return res.status(404).json({ message: 'Job not found' });
 
             let uploadedImagePath = job.jobImage;
 
@@ -169,21 +183,19 @@ router.put('/jobs/:id',
                 if (data?.publicUrl) {
                     uploadedImagePath = data.publicUrl;
                     console.log('✅ Final image URL:', uploadedImagePath);
-                } else {
-                    console.error('❌ Supabase did not return a public URL');
                 }
             }
 
             const updatedData = {
                 ...req.body,
-                jobImage: uploadedImagePath
+                jobImage: uploadedImagePath,
             };
 
             const updatedJob = await job.update(updatedData);
-            res.status(200).send(updatedJob);
+            res.status(200).json(updatedJob);
         } catch (error) {
             console.error('❌ Error updating job:', error);
-            res.status(500).send({ message: 'Error updating job.' });
+            res.status(500).json({ message: 'Error updating job.' });
         }
     }
 );
@@ -195,7 +207,7 @@ router.delete('/jobs/:id',
     async (req, res) => {
         try {
             const job = await Job.findByPk(req.params.id);
-            if (!job) return res.status(404).send({ message: 'Job not found' });
+            if (!job) return res.status(404).json({ message: 'Job not found' });
 
             if (job.jobImage) {
                 try {
@@ -210,10 +222,10 @@ router.delete('/jobs/:id',
             }
 
             await job.destroy();
-            res.status(200).send({ message: 'Job deleted successfully' });
+            res.status(200).json({ message: 'Job deleted successfully' });
         } catch (error) {
             console.error('❌ Error deleting job:', error);
-            res.status(500).send({ message: 'Error deleting job.' });
+            res.status(500).json({ message: 'Error deleting job.' });
         }
     }
 );
