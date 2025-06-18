@@ -40,24 +40,30 @@ router.post('/jobs',
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
                 const fileName = `job-${Date.now()}${fileExt}`;
-
-                const { error } = await supabase.storage
+            
+                const { error: uploadError } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
                         contentType: req.file.mimetype,
                         upsert: false,
                     });
-
-                if (error) throw error;
-
-                const { data } = supabase.storage
+            
+                if (uploadError) {
+                    console.error('❌ Error uploading to Supabase:', uploadError.message);
+                    throw uploadError;
+                }
+            
+                const { data, error: urlError } = supabase.storage
                     .from('job-images')
                     .getPublicUrl(fileName);
-
+            
+                if (urlError) {
+                    console.error('❌ Failed to get public URL:', urlError.message);
+                }
+            
                 uploadedImagePath = data?.publicUrl || null;
-                console.log('Uploaded path:', uploadedImagePath); // Confirm it's correct
-
-            }
+                console.log('✅ Final image URL:', uploadedImagePath);
+            }            
 
             // OCR logic
             if (req.file) {
@@ -133,23 +139,31 @@ router.put('/jobs/:id',
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
                 const fileName = `job-${Date.now()}${fileExt}`;
-
-                const { error } = await supabase.storage
+            
+                const { error: uploadError } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
-                        contentType: req.file.mimetype
+                        contentType: req.file.mimetype,
+                        upsert: false,
                     });
-
-                if (error) throw error;
-
-                const { data } = supabase.storage
+            
+                if (uploadError) {
+                    console.error('❌ Error uploading to Supabase:', uploadError.message);
+                    throw uploadError;
+                }
+            
+                const { data, error: urlError } = supabase.storage
                     .from('job-images')
                     .getPublicUrl(fileName);
-
+            
+                if (urlError) {
+                    console.error('❌ Failed to get public URL:', urlError.message);
+                }
+            
                 uploadedImagePath = data?.publicUrl || null;
-                console.log('Uploaded path:', uploadedImagePath); // Confirm it's correct
-
+                console.log('✅ Final image URL:', uploadedImagePath);
             }
+            
 
             const updatedData = {
                 ...req.body,
