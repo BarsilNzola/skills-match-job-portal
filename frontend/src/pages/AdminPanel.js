@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import api, { postJobFromImage, postJobManual } from '../services/api';
+import api from '../services/api';
 import { Button, Form, Alert, Spinner, Card, Badge } from 'react-bootstrap';
 import '../styles/adminpanel.css';
 
@@ -10,6 +10,8 @@ const AdminPanel = () => {
     formData: {
       title: '',
       description: '',
+      company: '',
+      location: '',
       skills: []
     },
     skillInput: '',
@@ -22,16 +24,16 @@ const AdminPanel = () => {
   });
 
   // Derived state
-  const { 
-    mode, 
-    formData, 
-    skillInput, 
-    extractedSkills, 
-    loading, 
-    error, 
-    success, 
-    ocrFailed, 
-    jobImage 
+  const {
+    mode,
+    formData,
+    skillInput,
+    extractedSkills,
+    loading,
+    error,
+    success,
+    ocrFailed,
+    jobImage
   } = state;
 
   // Handlers
@@ -40,30 +42,8 @@ const AdminPanel = () => {
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-  
-    try {
-      console.log('Uploading file:', {
-        name: file.name,
-        type: file.type,
-        size: file.size
-      });
-  
-      const formData = new FormData();
-      formData.append('jobImage', file); // Must match backend exactly
-  
-      // Clean API call - no headers needed
-      const response = await api.post('api/admin/jobs', formData);
-      
-      console.log('Upload success:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Upload failed:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        config: error.config
-      });
-      throw error;
-    }
+
+    setState(prev => ({ ...prev, jobImage: file }));
   };
 
   const handleInputChange = useCallback((e) => {
@@ -79,14 +59,14 @@ const AdminPanel = () => {
 
   const handleSkillAdd = useCallback(() => {
     if (!skillInput.trim()) return;
-    
+
     const newSkills = [
       ...new Set([
         ...formData.skills,
         ...skillInput.split(',').map(s => s.trim()).filter(s => s)
       ])
     ];
-    
+
     setState(prev => ({
       ...prev,
       formData: {
@@ -99,52 +79,59 @@ const AdminPanel = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     setState(prev => ({
       ...prev,
       loading: true,
       error: null,
       success: null
     }));
-  
+
     try {
       let response;
-  
+
       if (mode === 'upload' && jobImage) {
-        const formData = new FormData();
-        formData.append('jobImage', jobImage);
-        formData.append('title', formData.title || '');
-        formData.append('description', formData.description || '');
-        formData.append('company', formData.company || '');
-  
-        response = await api.post('api/admin/jobs', formData, {
+        const formDataToSend = new FormData();
+        formDataToSend.append('jobImage', jobImage);
+        formDataToSend.append('title', formData.title || '');
+        formDataToSend.append('description', formData.description || '');
+        formDataToSend.append('company', formData.company || '');
+        formDataToSend.append('location', formData.location || '');
+
+        response = await api.post('api/admin/jobs', formDataToSend, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         });
-  
+
       } else {
         // Manual post
         response = await api.post('api/admin/jobs', {
           title: formData.title,
           description: formData.description,
           company: formData.company,
-          skills: [...formData.skills, ...extractedSkills],
-          location: formData.location || ''
+          location: formData.location,
+          skills: [...formData.skills, ...extractedSkills]
         });
       }
-  
+
       setState(prev => ({
         ...prev,
         success: 'Job posted successfully!',
-        formData: { title: '', description: '', company: '', location: '', skills: [] },
+        formData: {
+          title: '',
+          description: '',
+          company: '',
+          location: '',
+          skills: []
+        },
         extractedSkills: [],
         jobImage: null,
         ocrFailed: false
       }));
     } catch (err) {
       console.error('Post error:', err);
-  
+
       setState(prev => ({
         ...prev,
         error: err.response?.data?.error || 'Failed to post job',
@@ -153,19 +140,18 @@ const AdminPanel = () => {
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
-  };  
+  };
 
-  // Skill Tag Component
   const SkillTag = ({ skill, isAutoDetected = false, onRemove }) => (
-    <Badge 
-      pill 
-      bg={isAutoDetected ? 'info' : 'primary'} 
+    <Badge
+      pill
+      bg={isAutoDetected ? 'info' : 'primary'}
       className="me-2 mb-2 skill-tag"
     >
       {skill}
       {!isAutoDetected && (
-        <button 
-          className="skill-tag-remove" 
+        <button
+          className="skill-tag-remove"
           onClick={() => onRemove(skill)}
           aria-label={`Remove ${skill}`}
         >
@@ -190,13 +176,13 @@ const AdminPanel = () => {
       <Card className="admin-card shadow-sm">
         <Card.Body>
           <h2 className="text-center mb-4">Post New Job</h2>
-          
+
           {error && (
             <Alert variant="danger" dismissible onClose={() => setState(prev => ({ ...prev, error: null }))}>
               {error}
             </Alert>
           )}
-          
+
           {success && (
             <Alert variant="success" dismissible onClose={() => setState(prev => ({ ...prev, success: null }))}>
               {success}
@@ -204,7 +190,6 @@ const AdminPanel = () => {
           )}
 
           <Form onSubmit={handleSubmit}>
-            {/* Mode Toggle */}
             <div className="d-flex justify-content-center mb-4">
               <div className="btn-group" role="group">
                 <Button
@@ -222,14 +207,13 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {/* Image Upload */}
             {mode === 'upload' && (
               <>
                 <Form.Group className="mb-3">
                   <Form.Label>Job Posting Image</Form.Label>
-                  <Form.Control 
-                    type="file" 
-                    accept="image/*" 
+                  <Form.Control
+                    type="file"
+                    accept="image/*"
                     onChange={handleImageChange}
                     required={mode === 'upload'}
                   />
@@ -247,7 +231,6 @@ const AdminPanel = () => {
               </>
             )}
 
-            {/* Manual Input Fields */}
             {(mode === 'manual' || ocrFailed) && (
               <>
                 <Form.Group className="mb-3">
@@ -259,6 +242,30 @@ const AdminPanel = () => {
                     onChange={handleInputChange}
                     required
                     placeholder="e.g., Senior Frontend Developer"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Company*</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., OpenAI"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Location*</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., Remote / New York, NY"
                   />
                 </Form.Group>
 
@@ -283,10 +290,10 @@ const AdminPanel = () => {
                       placeholder="e.g., JavaScript, Project Management"
                       value={skillInput}
                       onChange={(e) => setState(prev => ({ ...prev, skillInput: e.target.value }))}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSkillAdd()}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSkillAdd())}
                     />
-                    <Button 
-                      variant="outline-primary" 
+                    <Button
+                      variant="outline-primary"
                       onClick={handleSkillAdd}
                       type="button"
                     >
@@ -296,9 +303,9 @@ const AdminPanel = () => {
                   {formData.skills.length > 0 && (
                     <div className="skill-tags-container mb-3">
                       {formData.skills.map(skill => (
-                        <SkillTag 
-                          key={skill} 
-                          skill={skill} 
+                        <SkillTag
+                          key={skill}
+                          skill={skill}
                           onRemove={handleSkillRemove}
                         />
                       ))}
@@ -308,36 +315,34 @@ const AdminPanel = () => {
               </>
             )}
 
-            {/* Auto-detected Skills */}
             {extractedSkills.length > 0 && (
               <Form.Group className="mb-3">
                 <Form.Label>Auto-Detected Skills</Form.Label>
                 <div className="skill-tags-container">
                   {extractedSkills.map(skill => (
-                    <SkillTag 
-                      key={skill} 
-                      skill={skill} 
-                      isAutoDetected 
+                    <SkillTag
+                      key={skill}
+                      skill={skill}
+                      isAutoDetected
                     />
                   ))}
                 </div>
               </Form.Group>
             )}
 
-            {/* Submit Button */}
             <div className="d-grid mt-4">
-              <Button 
-                variant="primary" 
-                type="submit" 
+              <Button
+                variant="primary"
+                type="submit"
                 disabled={loading}
                 size="lg"
               >
                 {loading ? (
                   <>
-                    <Spinner 
-                      as="span" 
-                      animation="border" 
-                      size="sm" 
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
                       role="status"
                       aria-hidden="true"
                       className="me-2"
