@@ -10,8 +10,7 @@ const app = express();
 
 // Configure CORS
 const allowedOrigins = [
-  'https://talentpath.onrender.com/',
-  'https://skills-match.onrender.com'
+  'https://talentpath.onrender.com'
 ];
 
 if (process.env.NODE_ENV !== 'production') {
