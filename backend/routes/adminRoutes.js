@@ -22,7 +22,7 @@ const upload = multer({
 }).single('jobImage');
 
 // POST - Create job (with image upload)
-router.post('/jobs', 
+router.post('/jobs',
     authMiddleware,
     adminMiddleware,
     (req, res, next) => {
@@ -37,12 +37,10 @@ router.post('/jobs',
             let jobImageUrl = DEFAULT_IMAGE_URL;
             let ocrFailed = false;
 
-            // 1. Always process image upload first (if exists)
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
-                const fileName = `job-images/${Date.now()}${fileExt}`;
-                
-                // Upload to Supabase
+                const fileName = `${Date.now()}${fileExt}`; // ✅ Upload directly to root
+
                 const { error } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
@@ -52,19 +50,17 @@ router.post('/jobs',
 
                 if (error) throw error;
 
-                // Get public URL
                 const { data: { publicUrl } } = supabase.storage
                     .from('job-images')
                     .getPublicUrl(fileName);
 
                 jobImageUrl = publicUrl;
 
-                // 2. Attempt OCR processing
+                // OCR processing
                 try {
                     const ocrData = await postJobFromImage(req.file.buffer);
                     jobData = {
                         ...ocrData,
-                        // Allow manual data to override OCR results
                         ...(req.body.title && { title: req.body.title }),
                         ...(req.body.company && { company: req.body.company }),
                         ...(req.body.description && { description: req.body.description })
@@ -72,17 +68,12 @@ router.post('/jobs',
                 } catch (ocrError) {
                     console.warn('OCR processing failed:', ocrError);
                     ocrFailed = true;
-                    // Continue with manual data below
                 }
             }
 
-            // 3. Fallback to manual data if:
-            //    - No file uploaded
-            //    - OCR failed
-            //    - Manual data exists
             if (!req.file || ocrFailed || Object.keys(jobData).length === 0) {
                 jobData = {
-                    ...jobData, // Keep any OCR data that might exist
+                    ...jobData,
                     title: req.body.title || jobData.title || 'Untitled Position',
                     company: req.body.company || jobData.company || 'Unknown Company',
                     description: req.body.description || jobData.description || '',
@@ -91,14 +82,9 @@ router.post('/jobs',
                 };
             }
 
-            // 4. Auto-extract skills if missing
             if (!jobData.skills && jobData.description) {
                 jobData.skills = extractSkills(jobData.description);
             }
-
-            // 5. Create the job (temporarily disable validation if needed)
-            // const validationError = validateJobData(jobData);
-            // if (validationError) return res.status(400).send({ message: validationError });
 
             const job = await Job.create({
                 jobImage: jobImageUrl,
@@ -118,7 +104,7 @@ router.post('/jobs',
 
         } catch (error) {
             console.error('Error creating job:', error);
-            res.status(500).json({ 
+            res.status(500).json({
                 error: 'Internal server error',
                 ...(process.env.NODE_ENV === 'development' && { details: error.message })
             });
@@ -127,7 +113,7 @@ router.post('/jobs',
 );
 
 // PUT - Update job
-router.put('/jobs/:id', 
+router.put('/jobs/:id',
     authMiddleware,
     adminMiddleware,
     (req, res, next) => {
@@ -146,8 +132,8 @@ router.put('/jobs/:id',
 
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
-                const fileName = `job-images/${Date.now()}${fileExt}`;
-                
+                const fileName = `${Date.now()}${fileExt}`; // ✅ Upload directly to root
+
                 const { error } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
@@ -179,7 +165,7 @@ router.put('/jobs/:id',
 // DELETE - Remove job
 router.delete('/jobs/:id',
     authMiddleware,
-    adminMiddleware, 
+    adminMiddleware,
     async (req, res) => {
         try {
             const job = await Job.findByPk(req.params.id);
@@ -190,7 +176,7 @@ router.delete('/jobs/:id',
                     const fileName = job.jobImage.split('/').pop();
                     await supabase.storage
                         .from('job-images')
-                        .remove([`job-images/${fileName}`]);
+                        .remove([fileName]); // ✅ no folder prefix
                 } catch (storageError) {
                     console.error('Error deleting job image:', storageError);
                 }
