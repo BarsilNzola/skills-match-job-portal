@@ -99,49 +99,61 @@ const AdminPanel = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setState(prev => ({ ...prev, loading: true, error: null, success: null }));
-
+  
+    setState(prev => ({
+      ...prev,
+      loading: true,
+      error: null,
+      success: null
+    }));
+  
     try {
-      let result;
+      let response;
+  
       if (mode === 'upload' && jobImage) {
         const formData = new FormData();
         formData.append('jobImage', jobImage);
-        result = await postJobFromImage(formData);
-        
-        setState(prev => ({
-          ...prev,
-          extractedSkills: result.skills || [],
-          ocrFailed: result.ocrFailed || false
-        }));
-
-        if (result.ocrFailed) {
-          return;
-        }
+        formData.append('title', formData.title || '');
+        formData.append('description', formData.description || '');
+        formData.append('company', formData.company || '');
+  
+        response = await api.post('/admin/jobs', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+  
       } else {
-        result = await postJobManual({
-          ...formData,
-          skills: [...formData.skills, ...extractedSkills]
+        // Manual post
+        response = await api.post('/admin/jobs', {
+          title: formData.title,
+          description: formData.description,
+          company: formData.company,
+          skills: [...formData.skills, ...extractedSkills],
+          location: formData.location || ''
         });
       }
-
+  
       setState(prev => ({
         ...prev,
         success: 'Job posted successfully!',
-        formData: { title: '', description: '', skills: [] },
+        formData: { title: '', description: '', company: '', location: '', skills: [] },
         extractedSkills: [],
-        jobImage: null
+        jobImage: null,
+        ocrFailed: false
       }));
     } catch (err) {
-      console.error('Posting error:', err);
+      console.error('Post error:', err);
+  
       setState(prev => ({
         ...prev,
-        error: err.response?.data?.message || 'Failed to post job',
-        ocrFailed: err.response?.data?.ocrFailed || false
+        error: err.response?.data?.error || 'Failed to post job',
+        ocrFailed: !!err.response?.data?.warning
       }));
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
-  };
+  };  
 
   // Skill Tag Component
   const SkillTag = ({ skill, isAutoDetected = false, onRemove }) => (
