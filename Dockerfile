@@ -24,9 +24,8 @@ WORKDIR /app/backend
 RUN rm -rf node_modules && \
     npm install --legacy-peer-deps --force && \
     python3 -m venv /opt/venv && \
-    . /opt/venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # === Set back to main directory ===
 WORKDIR /app
