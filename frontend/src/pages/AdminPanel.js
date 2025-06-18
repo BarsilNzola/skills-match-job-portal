@@ -52,7 +52,7 @@ const AdminPanel = () => {
       formData.append('jobImage', file); // Must match backend exactly
   
       // Clean API call - no headers needed
-      const response = await api.post('/admin/jobs', formData);
+      const response = await api.post('api/admin/jobs', formData);
       
       console.log('Upload success:', response.data);
       return response.data;
@@ -117,7 +117,7 @@ const AdminPanel = () => {
         formData.append('description', formData.description || '');
         formData.append('company', formData.company || '');
   
-        response = await api.post('/admin/jobs', formData, {
+        response = await api.post('api/admin/jobs', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -125,7 +125,7 @@ const AdminPanel = () => {
   
       } else {
         // Manual post
-        response = await api.post('/admin/jobs', {
+        response = await api.post('api/admin/jobs', {
           title: formData.title,
           description: formData.description,
           company: formData.company,
