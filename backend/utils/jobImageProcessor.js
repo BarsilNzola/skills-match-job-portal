@@ -20,7 +20,7 @@ async function postJobFromImage(imageBuffer) {
 
             const pythonScriptPath = path.join(__dirname, '../scripts/job_processor.py');
             
-            exec(`python ${pythonScriptPath} "${tempFilePath}"`, async (error, stdout, stderr) => {
+            exec(`python3 ${pythonScriptPath} "${tempFilePath}"`, async (error, stdout, stderr) => {
                 try {
                     // Clean up temp file regardless of success/failure
                     await unlink(tempFilePath);
