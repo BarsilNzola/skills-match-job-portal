@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configure base URL based on environment
 const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://skills-match.onrender.com'  // Production URL
+  ? 'https://talentpath.onrender.com'  // Production URL
   : 'http://localhost:5000';            // Development URL
 
 const api = axios.create({

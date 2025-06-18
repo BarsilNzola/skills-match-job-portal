@@ -250,7 +250,7 @@ router.get('/avatar/:userId', async (req, res) => {
         console.error('Avatar retrieval error:', error);
         
         // Fallback to hardcoded default if Supabase fails
-        const hardcodedDefault = 'https://your-app.com/default-avatar.jpg';
+        const hardcodedDefault = './uploads/avatars/default-avatar.jpg';
         return res.redirect(hardcodedDefault);
     }
 });

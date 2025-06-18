@@ -10,6 +10,7 @@ const app = express();
 
 // Configure CORS
 const allowedOrigins = [
+  'https://talentpath.onrender.com/',
   'https://skills-match.onrender.com'
 ];
 
