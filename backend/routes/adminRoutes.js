@@ -6,7 +6,7 @@ const Job = require('../models/Job');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { extractSkills, validateJobData } = require('../utils/Validator');
 const supabase = require('../utils/supabase');
-const DEFAULT_IMAGE_PATH = null; // Only store real paths in DB
+const DEFAULT_IMAGE_PATH = null;
 
 // Multer config
 const upload = multer({
@@ -40,30 +40,34 @@ router.post('/jobs',
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
                 const fileName = `job-${Date.now()}${fileExt}`;
-            
+
                 const { error: uploadError } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
                         contentType: req.file.mimetype,
                         upsert: false,
                     });
-            
+
                 if (uploadError) {
                     console.error('❌ Error uploading to Supabase:', uploadError.message);
                     throw uploadError;
                 }
-            
+
                 const { data, error: urlError } = supabase.storage
                     .from('job-images')
                     .getPublicUrl(fileName);
-            
+
                 if (urlError) {
                     console.error('❌ Failed to get public URL:', urlError.message);
                 }
-            
-                uploadedImagePath = data?.publicUrl || null;
-                console.log('✅ Final image URL:', uploadedImagePath);
-            }            
+
+                if (data?.publicUrl) {
+                    uploadedImagePath = data.publicUrl;
+                    console.log('✅ Final image URL:', uploadedImagePath);
+                } else {
+                    console.error('❌ Supabase did not return a public URL');
+                }
+            }
 
             // OCR logic
             if (req.file) {
@@ -76,7 +80,7 @@ router.post('/jobs',
                         ...(req.body.description && { description: req.body.description })
                     };
                 } catch (ocrError) {
-                    console.warn('OCR processing failed:', ocrError);
+                    console.warn('⚠️ OCR processing failed:', ocrError);
                     ocrFailed = true;
                 }
             }
@@ -106,13 +110,15 @@ router.post('/jobs',
                 postedDate: new Date(),
             });
 
+            console.log('📝 Job saved:', job.toJSON());
+
             res.status(201).json({
                 success: true,
                 job,
                 ...(ocrFailed && { warning: 'OCR processing failed - used manual fields' })
             });
         } catch (error) {
-            console.error('Error creating job:', error);
+            console.error('❌ Error creating job:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
     }
@@ -139,31 +145,34 @@ router.put('/jobs/:id',
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
                 const fileName = `job-${Date.now()}${fileExt}`;
-            
+
                 const { error: uploadError } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
                         contentType: req.file.mimetype,
                         upsert: false,
                     });
-            
+
                 if (uploadError) {
                     console.error('❌ Error uploading to Supabase:', uploadError.message);
                     throw uploadError;
                 }
-            
+
                 const { data, error: urlError } = supabase.storage
                     .from('job-images')
                     .getPublicUrl(fileName);
-            
+
                 if (urlError) {
                     console.error('❌ Failed to get public URL:', urlError.message);
                 }
-            
-                uploadedImagePath = data?.publicUrl || null;
-                console.log('✅ Final image URL:', uploadedImagePath);
+
+                if (data?.publicUrl) {
+                    uploadedImagePath = data.publicUrl;
+                    console.log('✅ Final image URL:', uploadedImagePath);
+                } else {
+                    console.error('❌ Supabase did not return a public URL');
+                }
             }
-            
 
             const updatedData = {
                 ...req.body,
@@ -173,6 +182,7 @@ router.put('/jobs/:id',
             const updatedJob = await job.update(updatedData);
             res.status(200).send(updatedJob);
         } catch (error) {
+            console.error('❌ Error updating job:', error);
             res.status(500).send({ message: 'Error updating job.' });
         }
     }
@@ -189,17 +199,20 @@ router.delete('/jobs/:id',
 
             if (job.jobImage) {
                 try {
+                    const imagePath = job.jobImage.replace(/^.*\/job-images\//, '');
                     await supabase.storage
                         .from('job-images')
-                        .remove([job.jobImage]); // Path stored directly
+                        .remove([imagePath]);
+                    console.log('🗑️ Deleted image:', imagePath);
                 } catch (storageError) {
-                    console.error('Error deleting job image:', storageError);
+                    console.error('❌ Error deleting job image:', storageError);
                 }
             }
 
             await job.destroy();
             res.status(200).send({ message: 'Job deleted successfully' });
         } catch (error) {
+            console.error('❌ Error deleting job:', error);
             res.status(500).send({ message: 'Error deleting job.' });
         }
     }
