@@ -23,7 +23,10 @@ RUN rm -rf node_modules && \
 WORKDIR /app/backend
 RUN rm -rf node_modules && \
     npm install --legacy-peer-deps --force && \
-    pip3 install --no-cache-dir -r requirements.txt
+    python3 -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # === Set back to main directory ===
 WORKDIR /app
