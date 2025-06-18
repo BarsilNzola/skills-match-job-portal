@@ -107,6 +107,10 @@ router.post('/jobs',
                 }
             }
 
+            if (!jobData) {
+                return res.status(500).json({ success: false, message: 'Failed to extract job data from image.' });
+            }
+
             // Validate job data before saving
             const { isValid, errors } = validateJobData(jobData);
             if (!isValid) {
