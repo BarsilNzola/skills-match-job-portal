@@ -25,9 +25,9 @@ RUN rm -rf node_modules && \
     npm install --legacy-peer-deps --force && \
     python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/python -m spacy download en_core_web_sm && \
-    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
-
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt && \
+    /opt/venv/bin/python -m spacy download en_core_web_sm
+    
 # === Set back to main directory ===
 WORKDIR /app
 
