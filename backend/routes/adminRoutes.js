@@ -6,9 +6,9 @@ const Job = require('../models/Job');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { extractSkills, validateJobData } = require('../utils/Validator');
 const supabase = require('../utils/supabase');
-const DEFAULT_IMAGE_URL = '/uploads/placeholder-image.jpg';
+const DEFAULT_IMAGE_PATH = null; // Only store real paths in DB
 
-// Configure Multer
+// Multer config
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -21,7 +21,7 @@ const upload = multer({
     }
 }).single('jobImage');
 
-// POST - Create job (with image upload)
+// POST - Create job
 router.post('/jobs',
     authMiddleware,
     adminMiddleware,
@@ -34,29 +34,27 @@ router.post('/jobs',
     async (req, res) => {
         try {
             let jobData = {};
-            let jobImageUrl = DEFAULT_IMAGE_URL;
+            let uploadedImagePath = DEFAULT_IMAGE_PATH;
             let ocrFailed = false;
 
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
-                const fileName = `${Date.now()}${fileExt}`; // ✅ Upload directly to root
+                const fileName = `job-${Date.now()}${fileExt}`;
 
                 const { error } = await supabase.storage
                     .from('job-images')
                     .upload(fileName, req.file.buffer, {
                         contentType: req.file.mimetype,
-                        upsert: true
+                        upsert: false,
                     });
 
                 if (error) throw error;
 
-                const { data: { publicUrl } } = supabase.storage
-                    .from('job-images')
-                    .getPublicUrl(fileName);
+                uploadedImagePath = fileName;
+            }
 
-                jobImageUrl = publicUrl;
-
-                // OCR processing
+            // OCR logic
+            if (req.file) {
                 try {
                     const ocrData = await postJobFromImage(req.file.buffer);
                     jobData = {
@@ -71,14 +69,14 @@ router.post('/jobs',
                 }
             }
 
+            // Fallback fields
             if (!req.file || ocrFailed || Object.keys(jobData).length === 0) {
                 jobData = {
                     ...jobData,
-                    title: req.body.title || jobData.title || 'Untitled Position',
-                    company: req.body.company || jobData.company || 'Unknown Company',
-                    description: req.body.description || jobData.description || '',
-                    skills: req.body.skills || jobData.skills || extractSkills(req.body.description || ''),
-                    jobImage: jobImageUrl
+                    title: req.body.title || 'Untitled Position',
+                    company: req.body.company || 'Unknown Company',
+                    description: req.body.description || '',
+                    skills: req.body.skills || extractSkills(req.body.description || ''),
                 };
             }
 
@@ -87,27 +85,23 @@ router.post('/jobs',
             }
 
             const job = await Job.create({
-                jobImage: jobImageUrl,
+                jobImage: uploadedImagePath,
                 title: jobData.title,
                 company: jobData.company,
                 description: jobData.description,
                 skillsRequired: jobData.skills,
                 location: req.body.location || null,
-                postedDate: new Date()
+                postedDate: new Date(),
             });
 
             res.status(201).json({
                 success: true,
                 job,
-                ...(ocrFailed && { warning: "OCR processing failed - used manual fields" })
+                ...(ocrFailed && { warning: 'OCR processing failed - used manual fields' })
             });
-
         } catch (error) {
             console.error('Error creating job:', error);
-            res.status(500).json({
-                error: 'Internal server error',
-                ...(process.env.NODE_ENV === 'development' && { details: error.message })
-            });
+            res.status(500).json({ error: 'Internal server error' });
         }
     }
 );
@@ -128,11 +122,11 @@ router.put('/jobs/:id',
             const job = await Job.findByPk(id);
             if (!job) return res.status(404).send({ message: 'Job not found' });
 
-            let jobImageUrl = job.jobImage;
+            let uploadedImagePath = job.jobImage;
 
             if (req.file) {
                 const fileExt = path.extname(req.file.originalname);
-                const fileName = `${Date.now()}${fileExt}`; // ✅ Upload directly to root
+                const fileName = `job-${Date.now()}${fileExt}`;
 
                 const { error } = await supabase.storage
                     .from('job-images')
@@ -142,16 +136,12 @@ router.put('/jobs/:id',
 
                 if (error) throw error;
 
-                const { data: { publicUrl } } = supabase.storage
-                    .from('job-images')
-                    .getPublicUrl(fileName);
-
-                jobImageUrl = publicUrl;
+                uploadedImagePath = fileName;
             }
 
             const updatedData = {
                 ...req.body,
-                jobImage: jobImageUrl
+                jobImage: uploadedImagePath
             };
 
             const updatedJob = await job.update(updatedData);
@@ -171,12 +161,11 @@ router.delete('/jobs/:id',
             const job = await Job.findByPk(req.params.id);
             if (!job) return res.status(404).send({ message: 'Job not found' });
 
-            if (job.jobImage && !job.jobImage.includes('default-job')) {
+            if (job.jobImage) {
                 try {
-                    const fileName = job.jobImage.split('/').pop();
                     await supabase.storage
                         .from('job-images')
-                        .remove([fileName]); // ✅ no folder prefix
+                        .remove([job.jobImage]); // Path stored directly
                 } catch (storageError) {
                     console.error('Error deleting job image:', storageError);
                 }
