@@ -50,7 +50,11 @@ router.post('/jobs',
 
                 if (error) throw error;
 
-                uploadedImagePath = fileName;
+                const { publicUrl } = supabase.storage
+                    .from('job-images')
+                    .getPublicUrl(fileName).data;
+
+                uploadedImagePath = publicUrl;
             }
 
             // OCR logic
@@ -136,7 +140,11 @@ router.put('/jobs/:id',
 
                 if (error) throw error;
 
-                uploadedImagePath = fileName;
+                const { publicUrl } = supabase.storage
+                    .from('job-images')
+                    .getPublicUrl(fileName).data;
+
+                uploadedImagePath = publicUrl;
             }
 
             const updatedData = {
