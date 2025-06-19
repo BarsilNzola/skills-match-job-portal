@@ -12,6 +12,7 @@ import os
 import csv
 import sys
 import json
+from spacy.matcher import PhraseMatcher
 
 # Initialize NLP tools
 nlp = spacy.load("en_core_web_sm")
@@ -23,44 +24,50 @@ spell = SpellChecker()
 skills_database = set()
 
 def load_skills_from_files():
-    """Load skills from local CSV and TXT into the skills_database set"""
+    """Load and normalize skills into the global skill set."""
     base_dir = os.path.join(os.path.dirname(__file__), '../utils/skill_data')
 
-    # Load ESCO skills
     try:
         with open(os.path.join(base_dir, 'esco/skills_en.csv'), encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 label = row.get('preferredLabel')
                 if label:
-                    skills_database.add(label.strip().lower())
+                    skill = label.strip().lower()
+                    if skill:
+                        skills_database.add(skill)
     except Exception as e:
         print(f"Error loading ESCO skills: {e}")
 
-    # Load O*NET skills
     try:
         with open(os.path.join(base_dir, 'onet/Skills.txt'), encoding='utf-8') as f:
             for line in f:
-                skill = line.strip()
+                skill = line.strip().lower()
                 if skill:
-                    skills_database.add(skill.lower())
+                    skills_database.add(skill)
     except Exception as e:
         print(f"Error loading O*NET skills: {e}")
 
 def extract_skills(text: str) -> list:
-    """Extract skills from given text"""
+    """Extract relevant skills from job description using phrase matching."""
     if not text:
         return []
 
-    words = set(re.sub(r'[^a-z0-9+#\s]', ' ', text.lower()).split())
+    doc = nlp(text.lower())
+    matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
 
-    extracted = []
-    for skill in skills_database:
-        normalized_skill = re.sub(r'[^a-z0-9+#]', '', skill)
-        if normalized_skill in words or any(w in words for w in skill.split()):
-            extracted.append(skill)
+    # Only keep unique lowercase skill phrases
+    patterns = [nlp.make_doc(skill) for skill in sorted(set(skills_database))]
+    matcher.add("SKILLS", patterns)
 
-    return extracted
+    matches = matcher(doc)
+
+    found_skills = set()
+    for match_id, start, end in matches:
+        span = doc[start:end]
+        found_skills.add(span.text.lower())
+
+    return sorted(found_skills)
 
 # -----------------------------
 # OCR & Text Processing
@@ -105,7 +112,7 @@ def basic_preprocess_image(image_data: bytes) -> Image.Image:
         enhancer = ImageEnhance.Contrast(img)
         return enhancer.enhance(1.8)
     except Exception as e:
-        print(f'Basic preprocessing failed: {e}')
+        print(f'Basic preprocessing failed: {e}', file=sys.stderr)
         raise
 
 
@@ -199,7 +206,7 @@ def post_job_from_image(image_data: bytes) -> Dict:
         return job_data
 
     except Exception as e:
-        print(f'Error processing job image: {e}')
+        print(f'Error processing job image: {e}', file=sys.stderr)
         raise
 
 
