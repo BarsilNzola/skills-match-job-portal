@@ -28,19 +28,26 @@ async function postJobFromImage(imageBuffer) {
                 } catch (cleanupError) {
                     console.error('Error cleaning up temp file:', cleanupError);
                 }
-
+            
+                // Log stdout and stderr for debugging
+                console.log('=== PYTHON STDOUT ===');
+                console.log(stdout);
+                console.log('=== PYTHON STDERR ===');
+                console.error(stderr);
+            
                 if (error) {
                     console.error('Python OCR error:', error);
                     return reject(new Error('Failed to process job image'));
                 }
-                
+            
                 try {
                     const result = JSON.parse(stdout);
                     resolve(result);
                 } catch (parseError) {
-                    reject(new Error('Invalid OCR processing result'));
+                    console.error('Failed to parse Python output:', parseError);
+                    return reject(new Error('Invalid OCR processing result'));
                 }
-            });
+            });            
         } catch (error) {
             reject(error);
         }
