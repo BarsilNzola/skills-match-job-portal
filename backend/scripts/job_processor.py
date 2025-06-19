@@ -71,17 +71,30 @@ def preprocess_image(image_data: bytes) -> Image.Image:
     try:
         img = Image.open(BytesIO(image_data))
         img = img.convert('L')  # grayscale
+
+        # Resize image to fixed width (Option 2)
+        base_width = 1800
+        w_percent = base_width / float(img.size[0])
+        h_size = int((float(img.size[1]) * float(w_percent)))
+        img = img.resize((base_width, h_size), Image.ANTIALIAS)
+
+        # Convert to NumPy for OpenCV processing
         img_np = np.array(img)
 
+        # Apply adaptive thresholding
         img_np = cv2.adaptiveThreshold(
             img_np, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY, 11, 2
         )
+
+        # Apply median blur
         img_np = cv2.medianBlur(img_np, 1)
 
+        # Convert back to PIL and enhance contrast (Option 3)
         processed_img = Image.fromarray(img_np)
         enhancer = ImageEnhance.Contrast(processed_img)
         return enhancer.enhance(2.0)
+
     except Exception as e:
         print(f'Image preprocessing failed: {e}')
         raise
@@ -97,7 +110,7 @@ def clean_text(raw_text: str) -> str:
 def extract_text_from_image(img: Image.Image) -> str:
     try:
         custom_config = r'''
-            --psm 6
+            --psm 3
             -c preserve_interword_spaces=1
             -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.,/()&
         '''
@@ -106,6 +119,7 @@ def extract_text_from_image(img: Image.Image) -> str:
     except Exception as e:
         print(f'OCR failed: {e}')
         raise
+
 
 # -----------------------------
 # Job Info Extraction
