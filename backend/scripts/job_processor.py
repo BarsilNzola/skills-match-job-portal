@@ -1,6 +1,6 @@
 import re
 import pytesseract
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageFilter
 import spacy
 from spellchecker import SpellChecker
 from typing import List, Dict
@@ -76,7 +76,7 @@ def preprocess_image(image_data: bytes) -> Image.Image:
         base_width = 1800
         w_percent = base_width / float(img.size[0])
         h_size = int((float(img.size[1]) * float(w_percent)))
-        img = img.resize((base_width, h_size), Image.ANTIALIAS)
+        img = img.resize((base_width, h_size), Image.Resampling.LANCZOS)
 
         # Convert to NumPy for OpenCV processing
         img_np = np.array(img)
@@ -90,7 +90,7 @@ def preprocess_image(image_data: bytes) -> Image.Image:
         # Apply median blur
         img_np = cv2.medianBlur(img_np, 1)
 
-        # Convert back to PIL and enhance contrast (Option 3)
+        # Convert back to PIL and enhance contrast
         processed_img = Image.fromarray(img_np)
         enhancer = ImageEnhance.Contrast(processed_img)
         return enhancer.enhance(2.0)
