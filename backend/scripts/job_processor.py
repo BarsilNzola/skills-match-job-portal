@@ -99,6 +99,16 @@ def preprocess_image(image_data: bytes) -> Image.Image:
         print(f'Image preprocessing failed: {e}')
         raise
 
+def basic_preprocess_image(image_data: bytes) -> Image.Image:
+    try:
+        img = Image.open(BytesIO(image_data)).convert('L')
+        enhancer = ImageEnhance.Contrast(img)
+        return enhancer.enhance(1.8)
+    except Exception as e:
+        print(f'Basic preprocessing failed: {e}')
+        raise
+
+
 def clean_text(raw_text: str) -> str:
     cleaned = re.sub(r'[^\x20-\x7E\n\r]', '', raw_text)
     cleaned = re.sub(r'(\w)\s+(\w)', r'\1\2', cleaned)
@@ -163,27 +173,35 @@ def extract_job_sections(text: str) -> Dict[str, str]:
 # -----------------------------
 
 def post_job_from_image(image_data: bytes) -> Dict:
+    load_skills_from_files()  # Ensure skills are loaded even in fallback path
+
+    def run_ocr_pipeline(preprocess_func):
+        processed_img = preprocess_func(image_data)
+        text = extract_text_from_image(processed_img)
+        return text
+
     try:
-        processed_img = preprocess_image(image_data)
-        raw_text = extract_text_from_image(processed_img)
+        raw_text = run_ocr_pipeline(preprocess_image)
+
+        # Fallback if OCR fails
+        if not raw_text.strip():
+            print("⚠️ OCR failed on enhanced pipeline, falling back to basic preprocessing...")
+            raw_text = run_ocr_pipeline(basic_preprocess_image)
 
         if not raw_text.strip():
             raise ValueError("OCR returned empty text")
 
         job_data = extract_job_sections(raw_text)
 
-        # Use qualifications first, fall back to description
-        skill_source = job_data['qualifications'] if job_data['qualifications'] else job_data['description']
+        skill_source = job_data['qualifications'] or job_data['description']
         job_data['skills'] = extract_skills(skill_source)
-
-        if 'job_image' in job_data:
-            del job_data['job_image']
 
         return job_data
 
     except Exception as e:
         print(f'Error processing job image: {e}')
         raise
+
 
 # -----------------------------
 # CLI Entry (for testing)
