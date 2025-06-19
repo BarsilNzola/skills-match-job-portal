@@ -10,7 +10,7 @@ const app = express();
 
 // Configure CORS
 const allowedOrigins = [
-  'https://talentpath.onrender.com'
+  'https://talentpath-icve.onrender.com'
 ];
 
 if (process.env.NODE_ENV !== 'production') {
