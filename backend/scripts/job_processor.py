@@ -120,7 +120,7 @@ def clean_text(raw_text: str) -> str:
 def extract_text_from_image(img: Image.Image) -> str:
     try:
         custom_config = r'''
-            --psm 3
+            --psm 4
             -c preserve_interword_spaces=1
             -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.,/()&
         '''
@@ -185,7 +185,7 @@ def post_job_from_image(image_data: bytes) -> Dict:
 
         # Fallback if OCR fails
         if not raw_text.strip():
-            print("⚠️ OCR failed on enhanced pipeline, falling back to basic preprocessing...")
+            print("OCR failed on enhanced pipeline, falling back to basic preprocessing...", file=sys.stderr)
             raw_text = run_ocr_pipeline(basic_preprocess_image)
 
         if not raw_text.strip():
