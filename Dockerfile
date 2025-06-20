@@ -32,7 +32,7 @@ RUN rm -rf node_modules && \
 WORKDIR /app
 
 # Port exposed by your backend
-EXPOSE 3000
+EXPOSE 5000
 
 # Run your backend server
 CMD ["npm", "start"]
