@@ -188,10 +188,11 @@ def post_job_from_image(image_data: bytes) -> Dict:
         return text
 
     try:
-        raw_text = run_ocr_pipeline(preprocess_image)
-
-        # Fallback if OCR fails
-        if not raw_text.strip():
+        try:
+            raw_text = run_ocr_pipeline(preprocess_image)
+            if not raw_text.strip():
+                raise ValueError("Empty OCR result from enhanced pipeline")
+        except Exception as e:
             print("OCR failed on enhanced pipeline, falling back to basic preprocessing...", file=sys.stderr)
             raw_text = run_ocr_pipeline(basic_preprocess_image)
 
@@ -199,7 +200,6 @@ def post_job_from_image(image_data: bytes) -> Dict:
             raise ValueError("OCR returned empty text")
 
         job_data = extract_job_sections(raw_text)
-
         skill_source = job_data['qualifications'] or job_data['description']
         job_data['skills'] = extract_skills(skill_source)
 
