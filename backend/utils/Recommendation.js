@@ -6,7 +6,6 @@ const { supabase } = require('../utils/supabase');
 
 // Configuration
 const SIMILARITY_THRESHOLD = 0.01;
-const DEFAULT_JOB_IMAGE = '/placeholder-image.jpg';
 
 /**
  * Fetches enhanced user profile data for recommendations
@@ -45,7 +44,7 @@ async function fetchUserProfile(userId) {
 async function fetchAllJobs() {
     try {
         const jobs = await Job.findAll({
-            attributes: ['id', 'title', 'company', 'description', 'jobImage'],
+            attributes: ['id', 'title', 'company', 'description', 'url'],
             where: { status: 'active' }, // Only active jobs
             raw: true
         });
@@ -64,27 +63,6 @@ async function fetchAllJobs() {
         console.error('Error fetching jobs:', error);
         throw new Error('Failed to fetch jobs');
     }
-}
-
-/**
- * Gets Supabase public URL for an image
- * @param {string} imagePath - Path to the image in storage
- * @returns {string} Public URL
- */
-function getSupabaseImageUrl(imagePath) {
-    if (imagePath.startsWith('http')) {
-        return imagePath;
-    }
-    
-    // Extract bucket and file path
-    const [bucket, ...fileParts] = imagePath.split('/');
-    const filePath = fileParts.join('/');
-    
-    const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-    
-    return publicUrl;
 }
 
 /**

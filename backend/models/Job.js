@@ -1,13 +1,9 @@
-const { DataTypes, Sequelize } = require('sequelize');
-const sequelize = require('../config/db');
+const { DataTypes } = require('sequelize')
+const sequelize = require('../config/db')
 
 const Job = sequelize.define('Job', {
-    jobImage: {
-        type: Sequelize.STRING,
-        allowNull: true,
-    },
     title: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING(150),
         allowNull: false,
     },
     company: {
@@ -31,8 +27,22 @@ const Job = sequelize.define('Job', {
         defaultValue: DataTypes.NOW,
         allowNull: false,
     },
+    source: {
+        type: DataTypes.STRING(50),
+        allowNull: false,
+    },
+    url: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+    }
 }, {
     timestamps: true,
-});
+    indexes: [
+        {
+            fields: ['title', 'company', 'source'],
+        },
+    ],
+})
 
-module.exports = Job;
+module.exports = Job
