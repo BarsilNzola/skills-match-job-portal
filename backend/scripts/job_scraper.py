@@ -115,6 +115,5 @@ def get_all_jobs(pages=1):
 
 if __name__ == "__main__":
     jobs = get_all_jobs(pages=1)
-    print(f"Total jobs: {len(jobs)}")
-    for j in jobs[:5]:
-        print(j)
+    import json
+    print(json.dumps(jobs))

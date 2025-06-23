@@ -2,6 +2,39 @@ const express = require('express');
 const router = express.Router();
 const Job = require('../models/Job');
 
+
+router.post('/post-jobs', (req, res) => {
+    // Run the Python scraper
+    exec('python3 ./scripts/job_scraper.py', async (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error.message}`)
+        return res.status(500).json({ error: error.message })
+      }
+  
+      if (stderr) {
+        console.error(`Stderr: ${stderr}`)
+      }
+  
+      try {
+        // Parse the output as JSON
+        const jobs = JSON.parse(stdout)
+  
+        // Insert into supabase
+        const { data, error: insertError } = await supabase
+          .from('jobs')
+          .insert(jobs)
+  
+        if (insertError) {
+          return res.status(500).json({ error: insertError.message })
+        }
+  
+        res.status(201).json({ inserted: data.length, data })
+      } catch (parseError) {
+        res.status(500).json({ error: 'Failed to parse scraper output' })
+      }
+    })
+  })
+
 // GET all jobs (public) with optional pagination
 router.get('/', async (req, res) => {
     try {

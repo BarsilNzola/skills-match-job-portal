@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
+require('./utils/scheduler');
 
 // Load environment variables FIRST
 dotenv.config({ path: path.join(__dirname, '.env') });
