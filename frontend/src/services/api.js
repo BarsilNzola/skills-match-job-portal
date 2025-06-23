@@ -118,46 +118,6 @@ export const fetchRecommendedJobs = async () => {
 export const fetchJobs = () => api.get('/jobs').catch(handleApiError);
 export const fetchJobDetail = (id) => api.get(`/jobs/${id}`).catch(handleApiError);
 
-export const postJobFromImage = async (file) => {
-    if (!file) throw new Error('No file provided');
-    
-    const fileName = file.name || 'untitled';
-    const extension = fileName.split('.').pop().toLowerCase();
-    const validExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-  
-    if (!validExtensions.includes(extension)) {
-      throw new Error(`Invalid file type. Allowed: ${validExtensions.join(', ')}`);
-    }
-  
-    const formData = new FormData();
-    formData.append('jobImage', file);
-  
-    try {
-      const response = await api.post('/api/admin/jobs', formData);
-      return response.data;
-    } catch (error) {
-      console.error('Upload failed:', {
-        error: error.response?.data,
-        fileInfo: {
-          name: fileName,
-          type: file.type,
-          size: file.size
-        }
-      });
-      throw error;
-    }
-};
-
-export const postJobManual = (jobData) => {
-    return api.post('/api/admin/jobs', jobData, {
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-    .then(response => response.data)
-    .catch(handleApiError);
-};
-
 export const deleteJob = (id) => api.delete(`api/admin/jobs/${id}`).catch(handleApiError);
 export const updateJob = (id, jobData) => api.put(`api/admin/jobs/${id}`, jobData).catch(handleApiError);
 

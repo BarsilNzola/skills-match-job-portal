@@ -394,39 +394,32 @@ const ProfilePage = () => {
         </Alert>
       ) : (
         state.recommendedJobs.map((job) => (
-          <Card key={job.id} className="job-card mb-4">
-            <Card.Img
-              variant="top"
-              src={job.jobImage || '/placeholder-image.jpg'}
-              alt="Recommended Job"
-              className="card-img-top"
-              onError={(e) => {
-                e.target.src = '/placeholder-image.jpg';
-              }}
-            />
-            <Card.Body>
-              <div className="mb-3">
-                <small className="text-muted">
-                  Match: <strong>{(job.similarity * 100).toFixed(0)}%</strong>
-                </small>
-                <ProgressBar now={job.similarity * 100} className="mt-2" />
-              </div>
-              <Button 
-                variant="primary" 
-                onClick={() => setState(prev => ({
-                  ...prev,
-                  ui: { ...prev.ui, showModal: true },
-                  selectedJob: job
-                }))}
-              >
-                Apply
-              </Button>
-            </Card.Body>
+          <Card key={job.id} className="job-card mb-4 p-3">
+            <h5>{job.title}</h5>
+            <div className="mb-2">
+              <small className="text-muted">
+                Match: <strong>{(job.similarity * 100).toFixed(0)}%</strong>
+              </small>
+              <ProgressBar
+                now={job.similarity * 100}
+                className="mt-2"
+                label={`${(job.similarity * 100).toFixed(0)}%`}
+              />
+            </div>
+            <Button
+              variant="primary"
+              href={job.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Job
+            </Button>
           </Card>
         ))
       )}
     </div>
   );
+  
 
   return (
     <Container fluid className="profile-container">
@@ -613,44 +606,6 @@ const ProfilePage = () => {
           Failed to load profile. Please try again.
         </Alert>
       )}
-
-      {/* Job Details Modal */}
-      <Modal 
-        show={state.ui.showModal} 
-        onHide={() => setState(prev => ({
-          ...prev,
-          ui: { ...prev.ui, showModal: false }
-        }))} 
-        size="lg"
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>{state.selectedJob?.title}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="text-center">
-          {state.selectedJob && (
-            <img
-              src={state.selectedJob.jobImage || '/placeholder-image.jpg'}
-              alt={state.selectedJob.title}
-              className="img-fluid mb-3"
-              style={{ maxHeight: '700px', objectFit: 'contain' }}
-              onError={(e) => {
-                e.target.src = '/placeholder-image.jpg';
-              }}
-            />
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button 
-            variant="secondary" 
-            onClick={() => setState(prev => ({
-              ...prev,
-              ui: { ...prev.ui, showModal: false }
-            }))}
-          >
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </Container>
   );
 };

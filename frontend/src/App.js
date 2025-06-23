@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Home from './pages/Home';
-import AdminPanel from './pages/AdminPanel';
 import JobPage from './pages/JobPage';
 import JobDetail from './components/JobDetail';
 import ProfilePage from './pages/ProfilePage';
@@ -58,11 +57,6 @@ const AppContent = () => {
               <li className="nav-item">
                 <Link className="nav-link" to="/jobs">Jobs</Link>
               </li>
-              {user?.role === 'admin' && (
-                <li className="nav-item">
-                  <Link className="nav-link" to="/admin">Admin Panel</Link>
-                </li>
-              )}
               {user ? (
                 <>
                   <li className="nav-item">
@@ -96,8 +90,6 @@ const AppContent = () => {
           <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
-          {/* Admin Panel Route - Only accessible by admins */}
-          <Route path="/admin" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/login" replace />} />
         </Routes>
       </div>
 
