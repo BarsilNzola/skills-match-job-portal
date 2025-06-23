@@ -45,7 +45,6 @@ async function fetchAllJobs() {
     try {
         const jobs = await Job.findAll({
             attributes: ['id', 'title', 'company', 'description', 'url'],
-            where: { status: 'active' }, // Only active jobs
             raw: true
         });
         
@@ -56,8 +55,6 @@ async function fetchAllJobs() {
 
         return jobs.map(job => ({
             ...job,
-            // Format image URL for Supabase
-            jobImage: job.jobImage ? getSupabaseImageUrl(job.jobImage) : DEFAULT_JOB_IMAGE
         }));
     } catch (error) {
         console.error('Error fetching jobs:', error);
