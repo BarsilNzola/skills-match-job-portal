@@ -78,7 +78,10 @@ const { initSkillDatabase } = require('./utils/skills-db');
 
 async function startServer() {
   try {
-    
+    // Sync DB before starting the server
+    await sequelize.sync({ alter: true }); // Sync with alter enabled
+    await initSkillDatabase();
+
     const PORT = process.env.PORT || 10000;
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`✅ Server running on port ${PORT}`);
@@ -91,11 +94,8 @@ async function startServer() {
       process.exit(1);
     });
 
-    await initSkillDatabase();
-    await sequelize.sync();
-
   } catch (error) {
-    console.error('Server startup failed:', error);
+    console.error('❌ Server startup failed:', error);
     process.exit(1);
   }
 }
