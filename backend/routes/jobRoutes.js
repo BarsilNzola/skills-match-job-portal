@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Job = require('../models/Job');
 const supabase = require('../utils/supabase');
+const { exec } = require('child_process')
 
 
 router.post('/post-jobs', (req, res) => {
