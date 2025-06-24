@@ -7,70 +7,103 @@ const { exec } = require('child_process');
 const pythonPath = process.env.PYTHON || '/opt/venv/bin/python';
 
 router.post('/post-jobs', (req, res) => {
-  console.log('🤖 Running scheduled job post request...')
-  
+  console.log('🤖 Running scheduled job post request...');
+
   exec(`${pythonPath} ./backend/scripts/job_scraper.py`, async (error, stdout, stderr) => {
     // 📢 Log all output immediately
     if (stdout) {
-      console.log(`✅ Stdout:\n${stdout}`)
+      console.log(`✅ Stdout:\n${stdout}`);
     }
     if (stderr) {
-      console.error(`❌ Stderr:\n${stderr}`)
+      console.error(`❌ Stderr:\n${stderr}`);
     }
     if (error) {
-      console.error(`❌ Exec Error:\n${error.stack || error.message}`)
+      console.error(`❌ Exec Error:\n${error.stack || error.message}`);
       return res.status(500).json({ 
         error: 'Error executing Python script', 
         details: error.stack || error.message, 
         stderr 
-      })
+      });
     }
 
     try {
-      // Trim to remove any whitespace/newlines
+      // Clean output
       const cleanOutput = stdout.trim();
-      
-      // Parse as JSON
-      const jobs = JSON.parse(cleanOutput);
 
-      if (!Array.isArray(jobs) || jobs.length === 0) {
-        return res.status(400).json({ error: 'No jobs found in scraper output', rawOutput: stdout })
+      // Parse as JSON
+      let jobs;
+      try {
+        jobs = JSON.parse(cleanOutput);
+      } catch (parseError) {
+        console.error(`❌ Parse Error:\n${parseError.stack || parseError.message}`);
+        return res.status(500).json({ 
+          error: 'Failed to parse scraper output as JSON', 
+          details: parseError.message, 
+          rawOutput: cleanOutput 
+        });
       }
 
-      // Fetch existing jobs for duplicate-checking
-      const { data: existing, error: existingError } = await supabase
-        .from('jobs')
-        .select('title, company, source')
+      if (!Array.isArray(jobs) || jobs.length === 0) {
+        console.warn(`⚠️ Scraper returned empty or invalid jobs list:`, jobs);
+        return res.status(400).json({ error: 'No jobs found in scraper output', rawOutput: cleanOutput });
+      }
+
+      // Fetch existing jobs
+      let existing, existingError;
+      try {
+        const result = await supabase.from('jobs').select('title, company, source');
+        existing = result.data;
+        existingError = result.error;
+      } catch (fetchError) {
+        existingError = fetchError;
+      }
+
       if (existingError) {
-        return res.status(500).json({ error: existingError.message })
+        console.error(`❌ Existing Error:\n${existingError.stack || existingError.message}`);
+        return res.status(500).json({ error: existingError.message || 'Error fetching existing jobs' });
+      }
+
+      if (!Array.isArray(existing)) {
+        return res.status(500).json({ error: 'Supabase returned unexpected data shape', existing });
       }
 
       const existingSet = new Set(
         existing.map((e) => `${e.title}::${e.company}::${e.source}`)
-      )
+      );
+
+      // Filter new jobs
       const newJobs = jobs.filter(
         (job) => !existingSet.has(`${job.title}::${job.company}::${job.source}`)
-      )
+      );
 
       if (newJobs.length === 0) {
-        return res.status(200).json({ inserted: 0, data: [] })
+        return res.status(200).json({ inserted: 0, data: [] });
       }
 
-      const { data: insertedData, error: insertError } = await supabase
-        .from('jobs')
-        .insert(newJobs)
-        .select()
+      // Insert new jobs
+      let insertedData, insertError;
+      try {
+        const result = await supabase.from('jobs').insert(newJobs).select();
+        insertedData = result.data;
+        insertError = result.error;
+      } catch (dbError) {
+        insertError = dbError;
+      }
+
       if (insertError) {
-        return res.status(500).json({ error: insertError.message })
+        console.error(`❌ Insert Error:\n${insertError.stack || insertError.message}`);
+        return res.status(500).json({ error: insertError.message || 'Error inserting new jobs' });
       }
 
-      res.status(201).json({ inserted: insertedData.length, data: insertedData })
-    } catch (parseError) {
-      console.error(`❌ Parse Error: ${parseError.stack || parseError.message}`)
-      res.status(500).json({ error: 'Failed to parse scraper output', details: parseError.message })
+      console.log(`✅ Successfully inserted ${insertedData.length} new job(s) into the database.`);
+      res.status(201).json({ inserted: insertedData.length, data: insertedData });
+
+    } catch (unexpectedError) {
+      console.error(`❌ Unexpected Error:\n${unexpectedError.stack || unexpectedError.message}`);
+      res.status(500).json({ error: 'Unexpected server error', details: unexpectedError.message });
     }
-  })
-})
+  });
+});
 
 
 // GET all jobs (public) with optional pagination
