@@ -6,22 +6,26 @@ from playwright.sync_api import sync_playwright
 # =========== BRIGHTERMONDAY ===========
 
 def scrape_brightermonday(pages=1):
-    base_url = "https://www.brightermonday.co.ke/jobs?page={}"
     jobs = []
-    for p in range(1, pages+1):
-        resp = requests.get(base_url.format(p), headers={'User-Agent': 'Mozilla/5.0'})
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        for article in soup.select('article.search-listing'):
-            title_elem = article.select_one('h2 a')
-            company_elem = article.select_one('.company')
-            link = title_elem['href'] if title_elem else None
-            jobs.append({
-                "title": title_elem.get_text(strip=True) if title_elem else "",
-                "company": company_elem.get_text(strip=True) if company_elem else "",
-                "description": "",  # BrighterMonday often has a separate page; leave blank or follow link
-                "url": link,
-                "source": "BrighterMonday"
-            })
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(user_agent='Mozilla/5.0')
+        for p_num in range(1, pages + 1):
+            url = f"https://www.brightermonday.co.ke/jobs?page={p_num}"
+            page.goto(url, wait_until='networkidle')
+            soup = BeautifulSoup(page.content(), 'html.parser')
+            for article in soup.select('article.search-listing'):
+                title_elem = article.select_one('h2 a')
+                company_elem = article.select_one('.company')
+                link = title_elem['href'] if title_elem else None
+                jobs.append({
+                    "title": title_elem.get_text(strip=True) if title_elem else "",
+                    "company": company_elem.get_text(strip=True) if company_elem else "",
+                    "description": "",
+                    "url": link,
+                    "source": "BrighterMonday"
+                })
+        browser.close()
     return jobs
 
 # =========== FUZU (JavaScript rendered) ===========
