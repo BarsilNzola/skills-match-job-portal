@@ -27,7 +27,11 @@ router.post('/post-jobs', (req, res) => {
     }
 
     try {
-      const jobs = JSON.parse(stdout)
+      // Trim to remove any whitespace/newlines
+      const cleanOutput = stdout.trim();
+      
+      // Parse as JSON
+      const jobs = JSON.parse(cleanOutput);
 
       if (!Array.isArray(jobs) || jobs.length === 0) {
         return res.status(400).json({ error: 'No jobs found in scraper output', rawOutput: stdout })
