@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Job = require('../models/Job');
 const supabase = require('../utils/supabase');
-const { exec } = require('child_process')
+const { exec } = require('child_process');
 
+const pythonCmd = process.env.PYTHON || 'python3'
 
 router.post('/post-jobs', (req, res) => {
   console.log('🤖 Running scheduled job post request...')
