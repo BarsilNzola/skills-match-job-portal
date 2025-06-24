@@ -18,7 +18,7 @@ def scrape_brightermonday(pages=1):
                     page.wait_for_selector('article.search-listing', timeout=20000)
                     break
                 except Exception as e:
-                    print(f"[brightermonday] Error on page {p_num} attempt {attempt+1}: {e}")
+                    print(f"[brightermonday] Error on page {p_num} attempt {attempt+1}: {e}", file=sys.stderr)
             soup = BeautifulSoup(page.content(), 'html.parser')
             for article in soup.select('article.search-listing'):
                 title_elem = article.select_one('h2 a')
