@@ -25,21 +25,23 @@ def scrape_brightermonday(pages=1):
 
 # =========== FUZU (JavaScript rendered) ===========
 
-def scrape_fuzu(pages=1):
+def scrape_jobwebkenya(pages=1):
     jobs = []
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        for p_num in range(1, pages+1):
-            page.goto(f"https://www.fuzu.com/kenya/jobs?page={p_num}")
-            page.wait_for_selector(".list-item__title", timeout=60000)  # adjust if selector differs
-            listings = page.query_selector_all(".list-item")
-            for listing in listings:
-                title = listing.query_selector(".list-item__title").inner_text() if listing.query_selector(".list-item__title") else ""
-                company = listing.query_selector(".list-item__company").inner_text() if listing.query_selector(".list-item__company") else ""
-                link = listing.query_selector("a").get_attribute("href") if listing.query_selector("a") else ""
-                jobs.append({"title": title, "company": company, "description": "", "url": link, "source": "Fuzu"})
-        browser.close()
+    base_url = "https://jobwebkenya.com/jobs/page/{}/"
+    for p in range(1, pages+1):
+        resp = requests.get(base_url.format(p), headers={'User-Agent': 'Mozilla/5.0'})
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        for article in soup.select('h3.job-list-title'):
+            title_elem = article.select_one('a')
+            link = title_elem['href'] if title_elem else None
+            company_elem = article.find_previous('p', class_='job-list-company')
+            jobs.append({
+                "title": title_elem.get_text(strip=True) if title_elem else "",
+                "company": company_elem.get_text(strip=True) if company_elem else "",
+                "description": "",
+                "url": link,
+                "source": "JobWebKenya"
+            })
     return jobs
 
 # =========== MYJOBMAG ===========
@@ -106,7 +108,7 @@ def scrape_careerjet(pages=1):
 def get_all_jobs(pages=1):
     all_jobs = []
     all_jobs.extend(scrape_brightermonday(pages))
-    all_jobs.extend(scrape_fuzu(pages))
+    all_jobs.extend(scrape_jobwebkenya(pages))
     all_jobs.extend(scrape_myjobmag(pages))
     all_jobs.extend(scrape_careerpointkenya(pages))
     all_jobs.extend(scrape_careerjet(pages))
