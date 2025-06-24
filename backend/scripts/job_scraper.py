@@ -12,19 +12,27 @@ def scrape_brightermonday(pages=1):
         page = browser.new_page(user_agent='Mozilla/5.0')
         for p_num in range(1, pages + 1):
             url = f"https://www.brightermonday.co.ke/jobs?page={p_num}"
-            page.goto(url, wait_until='networkidle')
+            for attempt in range(3):
+                try:
+                    page.goto(url, wait_until='domcontentloaded', timeout=60000)
+                    page.wait_for_selector('article.search-listing', timeout=20000)
+                    break
+                except Exception as e:
+                    print(f"[brightermonday] Error on page {p_num} attempt {attempt+1}: {e}")
             soup = BeautifulSoup(page.content(), 'html.parser')
             for article in soup.select('article.search-listing'):
                 title_elem = article.select_one('h2 a')
                 company_elem = article.select_one('.company')
                 link = title_elem['href'] if title_elem else None
-                jobs.append({
-                    "title": title_elem.get_text(strip=True) if title_elem else "",
-                    "company": company_elem.get_text(strip=True) if company_elem else "",
-                    "description": "",
-                    "url": link,
-                    "source": "BrighterMonday"
-                })
+                jobs.append(
+                    {
+                        "title": title_elem.get_text(strip=True) if title_elem else "",
+                        "company": company_elem.get_text(strip=True) if company_elem else "",
+                        "description": "",
+                        "url": link,
+                        "source": "BrighterMonday",
+                    }
+                )
         browser.close()
     return jobs
 
