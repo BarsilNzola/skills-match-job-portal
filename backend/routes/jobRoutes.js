@@ -9,7 +9,7 @@ const pythonCmd = process.env.PYTHON || 'python3'
 router.post('/post-jobs', (req, res) => {
   console.log('🤖 Running scheduled job post request...')
   
-  exec(`${PYTHON} ./backend/scripts/job_scraper.py`, async (error, stdout, stderr) => {
+  exec(`${pythonCmd} ./backend/scripts/job_scraper.py`, async (error, stdout, stderr) => {
     // 📢 Log all output immediately
     if (stdout) {
       console.log(`✅ Stdout:\n${stdout}`)
