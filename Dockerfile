@@ -26,7 +26,8 @@ RUN rm -rf node_modules && \
     python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --upgrade pip && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt && \
-    /opt/venv/bin/python -m spacy download en_core_web_sm
+    /opt/venv/bin/python -m spacy download en_core_web_sm && \
+    /opt/venv/bin/playwright install --with-deps chromium
     
 # === Set back to main directory ===
 WORKDIR /app
