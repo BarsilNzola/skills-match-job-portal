@@ -1,4 +1,5 @@
 import requests
+import sys
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
@@ -92,7 +93,7 @@ def scrape_kenyamoja(pages=1):
     for p in range(1, pages + 1):
         resp = requests.get(base_url.format(p), headers=headers, timeout=10)
         if resp.status_code != 200:
-            print(f"[WARN] KenyaMoja page {p} returned {resp.status_code}")
+            print(f"[WARN] KenyaMoja page {p} returned {resp.status_code}", file=sys.stderr)
             continue
 
         soup = BeautifulSoup(resp.text, 'html.parser')
