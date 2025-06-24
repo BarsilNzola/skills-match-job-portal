@@ -1,17 +1,18 @@
-// scheduler.js
 const cron = require('node-cron')
 const axios = require('axios')
 
-// Schedule to run every day at 11:00 AM
-// Cron format: "0 11 * * *" means: minute 0, hour 11, every day
-cron.schedule('0 11 * * *', async () => {
+// Configure the base URL for local or production
+const BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://talentpath-icve.onrender.com'  // <-- put your deployed site URL here
+  : 'http://localhost:10000'
+
+// Schedule a job to run every 5 minutes
+cron.schedule('*/5 * * * *', async () => {
   try {
-    console.log('Running scheduled job posting at 11 AM...')
-    await axios.post('http://localhost:3000/post-jobs')
-    console.log('Jobs successfully posted!')
+    console.log('🤖 Running scheduled job post request...')
+    const { data } = await axios.post(`${BASE_URL}/jobs/post-jobs`)
+    console.log(`✅ Inserted ${data.inserted} new jobs`)
   } catch (error) {
-    console.error('Error posting jobs:', error.message)
+    console.error('❌ Error running scheduled job:', error.message)
   }
 })
-
-module.exports = {} // so you can require it elsewhere

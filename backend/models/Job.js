@@ -40,6 +40,7 @@ const Job = sequelize.define('Job', {
     timestamps: true,
     indexes: [
         {
+            unique: true,
             fields: ['title', 'company', 'source'],
         },
     ],
