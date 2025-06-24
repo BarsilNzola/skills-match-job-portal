@@ -6,7 +6,7 @@ const { exec } = require('child_process')
 
 
 router.post('/post-jobs', (req, res) => {
-  exec('python3 ./scripts/job_scraper.py', async (error, stdout, stderr) => {
+  exec('python3 ./backend/scripts/job_scraper.py', async (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ error: error.message })
     }
