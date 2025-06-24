@@ -85,23 +85,31 @@ def scrape_careerpointkenya(pages=1):
 
 # =========== CAREERJET ===========
 
-def scrape_careerjet(pages=1):
+def scrape_kenyamoja(pages=1):
     jobs = []
-    for p in range(1, pages+1):
-        resp = requests.get(f"https://www.careerjet.co.ke/jobs?page={p}", headers={'User-Agent': 'Mozilla/5.0'})
+    base_url = "https://www.kenyamoja.com/jobs/page/{}/"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    for p in range(1, pages + 1):
+        resp = requests.get(base_url.format(p), headers=headers, timeout=10)
+        if resp.status_code != 200:
+            print(f"[WARN] KenyaMoja page {p} returned {resp.status_code}")
+            continue
+
         soup = BeautifulSoup(resp.text, 'html.parser')
-        for article in soup.select('article'):
-            title_elem = article.select_one('a')
+        for card in soup.select('.job-item'):
+            title_elem = card.select_one('.job-title a')
+            company_elem = card.select_one('.job-company')
             link = title_elem['href'] if title_elem else None
-            company_elem = article.select_one('.company')
+
             jobs.append({
                 "title": title_elem.get_text(strip=True) if title_elem else "",
                 "company": company_elem.get_text(strip=True) if company_elem else "",
-                "description": "",
+                "description": "", 
                 "url": link,
-                "source": "CareerJet"
+                "source": "KenyaMoja"
             })
     return jobs
+
 
 # =========== MASTER FUNCTION ===========
 
@@ -111,7 +119,7 @@ def get_all_jobs(pages=1):
     all_jobs.extend(scrape_jobwebkenya(pages))
     all_jobs.extend(scrape_myjobmag(pages))
     all_jobs.extend(scrape_careerpointkenya(pages))
-    all_jobs.extend(scrape_careerjet(pages))
+    all_jobs.extend(scrape_kenyamoja(pages))
     return all_jobs
 
 
