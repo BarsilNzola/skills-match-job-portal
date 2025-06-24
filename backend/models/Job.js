@@ -25,7 +25,7 @@ const Job = sequelize.define('Job', {
     postedDate: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
-        allowNull: false,
+        allowNull:true,
     },
     source: {
         type: DataTypes.STRING(50),
