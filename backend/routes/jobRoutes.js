@@ -4,12 +4,12 @@ const Job = require('../models/Job');
 const supabase = require('../utils/supabase');
 const { exec } = require('child_process');
 
-const pythonCmd = process.env.PYTHON || 'python3'
+const pythonPath = process.env.PYTHON || '/opt/venv/bin/python';
 
 router.post('/post-jobs', (req, res) => {
   console.log('🤖 Running scheduled job post request...')
   
-  exec(`${pythonCmd} ./backend/scripts/job_scraper.py`, async (error, stdout, stderr) => {
+  exec(`${pythonPath} ./backend/scripts/job_scraper.py`, async (error, stdout, stderr) => {
     // 📢 Log all output immediately
     if (stdout) {
       console.log(`✅ Stdout:\n${stdout}`)
