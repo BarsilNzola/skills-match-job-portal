@@ -32,7 +32,7 @@ def scrape_fuzu(pages=1):
         page = browser.new_page()
         for p_num in range(1, pages+1):
             page.goto(f"https://www.fuzu.com/kenya/jobs?page={p_num}")
-            page.wait_for_selector(".list-item")  # adjust if selector differs
+            page.wait_for_selector(".list-item__title", timeout=60000)  # adjust if selector differs
             listings = page.query_selector_all(".list-item")
             for listing in listings:
                 title = listing.query_selector(".list-item__title").inner_text() if listing.query_selector(".list-item__title") else ""
