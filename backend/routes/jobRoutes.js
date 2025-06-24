@@ -6,22 +6,33 @@ const { exec } = require('child_process')
 
 
 router.post('/post-jobs', (req, res) => {
-  exec('python3 ./backend/scripts/job_scraper.py', async (error, stdout, stderr) => {
-    if (error) {
-      return res.status(500).json({ error: error.message })
+  console.log('🤖 Running scheduled job post request...')
+  
+  exec(`${PYTHON} ./backend/scripts/job_scraper.py`, async (error, stdout, stderr) => {
+    // 📢 Log all output immediately
+    if (stdout) {
+      console.log(`✅ Stdout:\n${stdout}`)
     }
     if (stderr) {
-      console.error(`Stderr: ${stderr}`)
+      console.error(`❌ Stderr:\n${stderr}`)
+    }
+    if (error) {
+      console.error(`❌ Exec Error:\n${error.stack || error.message}`)
+      return res.status(500).json({ 
+        error: 'Error executing Python script', 
+        details: error.stack || error.message, 
+        stderr 
+      })
     }
 
     try {
       const jobs = JSON.parse(stdout)
 
       if (!Array.isArray(jobs) || jobs.length === 0) {
-        return res.status(400).json({ error: 'No jobs found in scraper output' })
+        return res.status(400).json({ error: 'No jobs found in scraper output', rawOutput: stdout })
       }
 
-      // 1️⃣ Fetch existing (title, company, source) tuples to filter duplicates
+      // Fetch existing jobs for duplicate-checking
       const { data: existing, error: existingError } = await supabase
         .from('jobs')
         .select('title, company, source')
@@ -29,11 +40,8 @@ router.post('/post-jobs', (req, res) => {
         return res.status(500).json({ error: existingError.message })
       }
 
-      // 2️⃣ Filter new jobs
       const existingSet = new Set(
-        existing.map(
-          (e) => `${e.title}::${e.company}::${e.source}`
-        )
+        existing.map((e) => `${e.title}::${e.company}::${e.source}`)
       )
       const newJobs = jobs.filter(
         (job) => !existingSet.has(`${job.title}::${job.company}::${job.source}`)
@@ -43,7 +51,6 @@ router.post('/post-jobs', (req, res) => {
         return res.status(200).json({ inserted: 0, data: [] })
       }
 
-      // 3️⃣ Insert new jobs
       const { data: insertedData, error: insertError } = await supabase
         .from('jobs')
         .insert(newJobs)
@@ -54,8 +61,8 @@ router.post('/post-jobs', (req, res) => {
 
       res.status(201).json({ inserted: insertedData.length, data: insertedData })
     } catch (parseError) {
-      console.error(`Parse Error: ${parseError}`)
-      res.status(500).json({ error: 'Failed to parse scraper output' })
+      console.error(`❌ Parse Error: ${parseError.stack || parseError.message}`)
+      res.status(500).json({ error: 'Failed to parse scraper output', details: parseError.message })
     }
   })
 })
