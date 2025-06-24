@@ -1,38 +1,49 @@
 import requests
 import sys
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # =========== BRIGHTERMONDAY ===========
+
 
 def scrape_brightermonday(pages=1):
     jobs = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(user_agent='Mozilla/5.0')
-        for p_num in range(1, pages + 1):
-            url = f"https://www.brightermonday.co.ke/jobs?page={p_num}"
-            for attempt in range(3):
-                try:
-                    page.goto(url, wait_until='domcontentloaded', timeout=60000)
-                    page.wait_for_selector('article.search-listing', timeout=20000)
-                    break
-                except Exception as e:
-                    print(f"[brightermonday] Error on page {p_num} attempt {attempt+1}: {e}", file=sys.stderr)
-            soup = BeautifulSoup(page.content(), 'html.parser')
-            for article in soup.select('article.search-listing'):
-                title_elem = article.select_one('h2 a')
-                company_elem = article.select_one('.company')
-                link = title_elem['href'] if title_elem else None
+        page = browser.new_page()
+
+        for page_num in range(1, pages + 1):
+            url = f"https://www.brightermonday.co.ke/jobs?page={page_num}"
+            print(f"[brightermonday] Scraping {url}")
+            page.goto(url, wait_until='networkidle')
+            try:
+                page.wait_for_selector('a[data-cy="listing-title-link"]', timeout=20000)
+            except PlaywrightTimeoutError:
+                print(f"[brightermonday] Timeout on page {page_num}")
+                continue
+
+            links = page.query_selector_all('a[data-cy="listing-title-link"]')
+            for link_elem in links:
+                title = link_elem.inner_text().strip() if link_elem else ""
+                href = link_elem.get_attribute('href')
+                full_url = href if href.startswith('http') else f"https://www.brightermonday.co.ke{href}"
+
+                # If company name is present in sibling elements, you can query like this:
+                # Example selector for company under the same article
+                article_elem = link_elem.closest('article')
+                company_elem = article_elem.query_selector('span.company-name') if article_elem else None
+                company = company_elem.inner_text().strip() if company_elem else ""
+
                 jobs.append(
                     {
-                        "title": title_elem.get_text(strip=True) if title_elem else "",
-                        "company": company_elem.get_text(strip=True) if company_elem else "",
+                        "title": title,
+                        "company": company,
                         "description": "",
-                        "url": link,
+                        "url": full_url,
                         "source": "BrighterMonday",
                     }
                 )
+
         browser.close()
     return jobs
 
