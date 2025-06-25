@@ -17,34 +17,40 @@ router.post('/post-jobs', (req, res) => {
       console.error(`❌ Stderr:\n${stderr}`);
     }
     if (error) {
-      return res.status(500).json({ error: error.message, stderr });
+      return res.status(500).json({ error: 'Error executing Python script', details: error.message, stderr });
     }
 
-    let jobs;
     try {
-      jobs = JSON.parse(stdout.trim());
-    } catch (e) {
-      return res.status(500).json({ error: 'JSON parse failed', details: e.message, rawOutput: stdout.trim() });
-    }
+      const cleanOutput = stdout.trim();
+      let jobs;
 
-    if (!Array.isArray(jobs) || jobs.length === 0) {
-      return res.status(400).json({ error: 'No jobs found in output', rawOutput: stdout.trim() });
-    }
-
-    // 🆕 Upsert into supabase using unique 'url' constraint
-    try {
-      const { data, error: insertError } = await supabase
-        .from('jobs')
-        .upsert(jobs) // upserts all, updating existing if 'url' matches
-        .select();
-
-      if (insertError) {
-        return res.status(500).json({ error: insertError.message });
+      try {
+        jobs = JSON.parse(cleanOutput);
+      } catch (parseError) {
+        return res.status(500).json({ error: 'Failed to parse scraper output as JSON', details: parseError.message, rawOutput: cleanOutput });
       }
 
-      return res.status(201).json({ upserted: data.length, data });
-    } catch (dbError) {
-      return res.status(500).json({ error: dbError.message || 'Error upserting jobs' });
+      if (!Array.isArray(jobs) || jobs.length === 0) {
+        return res.status(400).json({ error: 'No jobs found in scraper output', rawOutput: cleanOutput });
+      }
+
+      // Upsert all jobs by their unique `url`
+      const { data: upsertedData, error: upsertError } = await supabase
+        .from('jobs')
+        .upsert(jobs, { onConflict: 'url' })
+        .select();
+
+      if (upsertError) {
+        console.error(`❌ Upsert Error:\n${upsertError.message}`);
+        return res.status(500).json({ error: upsertError.message, details: upsertError.details || '' });
+      }
+
+      console.log(`✅ Successfully upserted ${upsertedData.length} job(s) into the database.`);
+      return res.status(200).json({ upserted: upsertedData.length, data: upsertedData });
+
+    } catch (unexpectedError) {
+      console.error(`❌ Unexpected Error:\n${unexpectedError.stack || unexpectedError.message}`);
+      return res.status(500).json({ error: 'Unexpected server error', details: unexpectedError.message });
     }
   });
 });
