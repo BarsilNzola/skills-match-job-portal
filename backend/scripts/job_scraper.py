@@ -1,4 +1,4 @@
-from datetime import time
+import time
 import requests
 import sys
 from bs4 import BeautifulSoup
@@ -43,7 +43,7 @@ def scrape_brightermonday(pages=1):
                         timeout=20000
                     )
                 except PlaywrightTimeoutError:
-                    print(f"[brightermonday] No job listings found on page {page_num}")
+                    print(f"[brightermonday] No job listings found on page {page_num}", file=sys.stderr)
                     continue
 
                 # Check if there are no results
