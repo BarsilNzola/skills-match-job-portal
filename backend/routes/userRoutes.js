@@ -185,25 +185,24 @@ router.post('/upload-avatar', authMiddleware, uploadAvatar.single('avatar'), asy
         // Upload to Supabase
         const { error } = await supabase.storage
             .from('user-avatars')
-            .upload(fileName, req.file.buffer, {
+            .upload(avatarPath, req.file.buffer, { 
                 contentType: req.file.mimetype,
-                upsert: true
+                upsert: true 
             });
 
-        if (error) throw error;
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
             .from('user-avatars')
-            .getPublicUrl(fileName);
+            .getPublicUrl(avatarPath);
 
-        // Delete old avatar if it exists and isn't default
-        if (user.profileImage && !user.profileImage.includes('default-avatar')) {
+            // Delete old file
+            if (user.profileImage && !user.profileImage.includes('default-avatar')) {
             try {
-                const oldFileName = user.profileImage.split('/').pop();
+                // Extract just the path after bucket
+                const oldFilePath = user.profileImage.split(`${bucketUrl}/`).pop();
                 await supabase.storage
-                    .from('user-avatars')
-                    .remove([`avatars/${oldFileName}`]);
+                .from('user-avatars')
+                .remove([oldFilePath]);
             } catch (deleteError) {
                 console.error('Error deleting old avatar:', deleteError);
             }
@@ -333,17 +332,14 @@ router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res
         // Upload to Supabase
         const { error } = await supabase.storage
             .from('user-cvs')
-            .upload(fileName, req.file.buffer, {
+            .upload(cvPath, req.file.buffer, {   
                 contentType: req.file.mimetype,
-                upsert: true
+                upsert: true 
             });
 
-        if (error) throw error;
-
-        // Get public URL (you might want to keep this private)
-        const { data: { publicUrl } } = supabase.storage
+            const { data: { publicUrl } } = supabase.storage
             .from('user-cvs')
-            .getPublicUrl(fileName);
+            .getPublicUrl(cvPath);
 
         // Delete old CV if it exists
         if (user.cvFile && user.cvFile.startsWith('cvs/')) {
@@ -357,7 +353,7 @@ router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res
         }
 
         // Update user record
-        user.cvFile = fileName; // Store the path, not full URL for more control
+        user.cvFile = cvPath; // Store the path, not full URL for more control
         user.cvFileType = fileExt.replace('.', '');
         await user.save();
 
@@ -403,30 +399,32 @@ router.post('/convert-cv', authMiddleware, async (req, res) => {
         return res.status(404).json({ error: 'CV not found' });
     }
 
-    const inputPath = path.join(__dirname, '../uploads/cv', user.cvFile);
-    const outputFilename = `converted-${Date.now()}.${format}`;
-    const outputPath = path.join(__dirname, '../uploads/cv', outputFilename);
+    // Download the CV file buffer
+    const { data: fileData, error } = await supabase.storage
+    .from('user-cvs')
+    .download(user.cvFile); // fileData is a Blob
+
+    // Write buffer to a temp file
+    const buffer = Buffer.from(await fileData.arrayBuffer());
+    const tempInput = path.join('/tmp', `cv-input${inputExt}`);
+    fs.writeFileSync(tempInput, buffer);
 
     try {
-        const inputExt = path.extname(inputPath).toLowerCase();
-        
-        // Validate supported conversion
-        if (!(
-            (inputExt === '.pdf' && format === 'docx') ||
-            (inputExt === '.docx' && format === 'pdf')
-        )) {
-            return res.status(400).json({ error: 'Unsupported conversion' });
-        }
-
-        // Perform conversion
+        // Convert
+        const tempOutput = path.join('/tmp', outputFilename);
         if (inputExt === '.pdf') {
-            await convertPdfToDocx(inputPath, outputPath);
+        await convertPdfToDocx(tempInput, tempOutput);
         } else {
-            await convertDocxToPdf(inputPath, outputPath);
+        await convertDocxToPdf(tempInput, tempOutput);
         }
 
-        // Update user record
-        user.cvFile = outputFilename;
+        // Upload back to supabase
+        const fileBuffer = fs.readFileSync(tempOutput);
+        await supabase.storage
+        .from('user-cvs')
+        .upload(`user-cvs/${user.id}/${outputFilename}`, fileBuffer, { upsert: true });
+
+        user.cvFile = `user-cvs/${user.id}/${outputFilename}`;
         user.cvFileType = format;
         await user.save();
 

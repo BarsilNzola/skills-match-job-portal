@@ -68,15 +68,15 @@ router.post('/post-jobs', (req, res) => {
   });
 });
 
-// GET all jobs (public) with optional pagination
+// GET all jobs (public)
 router.get('/', async (req, res) => {
   const { limit = 20, offset = 0 } = req.query;
   try {
     const { data: jobs, error } = await supabase
       .from('jobs')
-      .select('id, title, company, location, description, createdAt')
+      .select('id, title, company, location, description, source, url, createdAt')
       .order('createdAt', { ascending: false })
-      .range(offset, offset + limit - 1); // range is inclusive
+      .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
 
@@ -87,13 +87,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-
 // GET single job (public)
 router.get('/:id', async (req, res) => {
   try {
     const { data: job, error } = await supabase
       .from('jobs')
-      .select('id, title, company, location, description')
+      .select('id, title, company, location, description, source, url, createdAt')
       .eq('id', req.params.id)
       .single();
 
