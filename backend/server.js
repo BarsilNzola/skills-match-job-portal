@@ -11,7 +11,7 @@ require('./utils/scheduler');
 
 // Configure CORS
 const allowedOrigins = [
-  'https://talentpath-icve.onrender.com'
+  'https://talentpath-9i5x.onrender.com'
 ];
 
 if (process.env.NODE_ENV !== 'production') {
