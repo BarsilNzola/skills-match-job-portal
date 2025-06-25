@@ -74,8 +74,8 @@ router.get('/', async (req, res) => {
   try {
     const { data: jobs, error } = await supabase
       .from('jobs')
-      .select('id, title, company, location, description, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, title, company, location, description, createdAt')
+      .order('createdAt', { ascending: false })
       .range(offset, offset + limit - 1); // range is inclusive
 
     if (error) throw new Error(error.message);
