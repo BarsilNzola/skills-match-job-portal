@@ -6,8 +6,8 @@ const BASE_URL = process.env.NODE_ENV === 'production'
   ? 'https://talentpath-icve.onrender.com'  // <-- put your deployed site URL here
   : 'http://localhost:10000'
 
-// Schedule a job to run every 5 minutes
-cron.schedule('*/5 * * * *', async () => {
+// Schedule a job to run every 10 minutes
+cron.schedule('*/10 * * * *', async () => {
   try {
     console.log('🤖 Running scheduled job post request...')
     const { data } = await axios.post(`${BASE_URL}/jobs/post-jobs`)
