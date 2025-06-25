@@ -34,10 +34,23 @@ router.post('/post-jobs', (req, res) => {
         return res.status(400).json({ error: 'No jobs found in scraper output', rawOutput: cleanOutput });
       }
 
-      // Upsert all jobs by their unique `url`
+      // ✅ Deduplicate jobs by URL
+      const seenUrls = new Set();
+      const dedupedJobs = jobs.filter((job) => {
+        if (!job.url) return false; // Skip jobs without URL
+        if (seenUrls.has(job.url)) return false; // Skip duplicate URL
+        seenUrls.add(job.url);
+        return true;
+      });
+
+      if (dedupedJobs.length === 0) {
+        return res.status(400).json({ error: 'All jobs were duplicates or missing URLs', rawOutput: cleanOutput });
+      }
+
+      // Upsert deduplicated jobs by their unique `url`
       const { data: upsertedData, error: upsertError } = await supabase
         .from('jobs')
-        .upsert(jobs, { onConflict: 'url' })
+        .upsert(dedupedJobs, { onConflict: 'url' })
         .select();
 
       if (upsertError) {
@@ -54,7 +67,6 @@ router.post('/post-jobs', (req, res) => {
     }
   });
 });
-
 
 // GET all jobs (public) with optional pagination
 router.get('/', async (req, res) => {
