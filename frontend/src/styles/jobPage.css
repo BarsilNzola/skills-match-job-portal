@@ -68,52 +68,110 @@
 }
 
 /* Card Styling */
-.card {
+.job-card {
     border: none;
-    border-radius: 0.75rem;
-    background-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
-
-.card:hover {
-    transform: translateY(-0.5rem);
-    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.4);
-    background-color: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.1);
+  
+.job-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.12);
 }
-
-.card-body {
-    padding: 1.5rem;
+  
+.job-preview {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
 }
-
-.card-title {
-    font-size: 1.3rem;
+  
+.source-badge {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    background-color: rgba(108, 117, 125, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+}
+  
+.view-details-btn {
+    border-radius: 20px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    border-width: 1px;
+    transition: all 0.2s ease;
+}
+  
+.view-details-btn:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: translateY(-2px);
+}
+  
+.job-link {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+}
+  
+.job-link:hover {
+    color: #0d6efd;
+    transform: translateY(-2px);
+}
+  
+.delete-btn {
+    border-radius: 20px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+  
+.delete-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    transform: translateY(-2px);
+}
+  
+/* Modal Styling */
+.modal-content {
+    background-color: #1e2a32;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+}
+  
+.modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+  
+.modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+  
+.modal-title {
     font-weight: 600;
-    margin-bottom: 0.5rem;
     color: white;
 }
-
-.card-subtitle {
-    font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.7) !important;
-    margin-bottom: 1rem !important;
-}
-
-.card-text {
-    font-size: 0.95rem;
+  
+.job-description {
     color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
+    line-height: 1.8;
+    white-space: pre-line;
+}
+  
+.job-description p {
+    margin-bottom: 1rem;
 }
 
 /* Location Text */
@@ -183,8 +241,16 @@
         margin-bottom: 1.5rem !important;
     }
     
-    .card-body {
-        padding: 1.25rem;
+    .job-card {
+        border-radius: 10px;
+    }
+      
+    .job-preview {
+        font-size: 0.85rem;
+    }
+      
+    .view-details-btn, .job-link {
+        font-size: 0.8rem;
     }
 }
 
@@ -203,15 +269,11 @@
         font-size: 0.9rem;
     }
     
-    .card {
-        border-radius: 0.5rem;
+    .job-card {
+        border-radius: 8px;
     }
-    
-    .card-title {
-        font-size: 1.1rem;
-    }
-    
-    .card-text {
-        font-size: 0.85rem;
+      
+    .modal-dialog {
+        margin: 0.5rem;
     }
 }

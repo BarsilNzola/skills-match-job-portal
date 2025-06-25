@@ -1,8 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { fetchJobs, deleteJob } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Container, Row, Col, Card, Button, Spinner, Alert } from 'react-bootstrap';
-import { FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
+import { 
+  Container, Row, Col, Card, Button, 
+  Spinner, Alert, Modal, Badge 
+} from 'react-bootstrap';
+import { 
+  FaSearch, 
+  FaMapMarkerAlt, 
+  FaExternalLinkAlt,
+  FaTrash,
+  FaInfoCircle
+} from 'react-icons/fa';
 import '../styles/jobPage.css';
 
 const JobPage = () => {
@@ -13,6 +22,8 @@ const JobPage = () => {
     location: '',
     loading: true,
     error: null,
+    showModal: false,
+    selectedJob: null
   });
 
   const getJobs = useCallback(async () => {
@@ -35,6 +46,18 @@ const JobPage = () => {
   const handleSearch = e => setState(prev => ({ ...prev, searchTerm: e.target.value }));
   const handleLocationChange = e => setState(prev => ({ ...prev, location: e.target.value }));
 
+  const handleShowModal = (job) => setState(prev => ({
+    ...prev,
+    showModal: true,
+    selectedJob: job
+  }));
+
+  const handleCloseModal = () => setState(prev => ({
+    ...prev,
+    showModal: false,
+    selectedJob: null
+  }));
+
   const handleDeleteJob = async jobId => {
     if (!window.confirm('Are you sure you want to delete this job?')) return;
     try {
@@ -56,31 +79,70 @@ const JobPage = () => {
   );
 
   const renderJobCard = job => (
-    <Card key={job.id} className="h-100 p-3">
-      <Card.Body className="d-flex flex-column">
-        <Card.Title>{job.title}</Card.Title>
-        <Card.Subtitle className="mb-2 text-muted">{job.company}</Card.Subtitle>
-        {job.location && (
-          <p className="text-muted mb-2">
-            <FaMapMarkerAlt className="me-1" />
-            {job.location}
-          </p>
-        )}
-        <Card.Text className="flex-grow-1">
-          {job.description}
-        </Card.Text>
-        {user?.role?.toLowerCase() === 'admin' && (
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => handleDeleteJob(job.id)}
-            className="mt-2 align-self-end"
-          >
-            Delete
-          </Button>
-        )}
-      </Card.Body>
-    </Card>
+    <Col key={job.id} className="mb-4">
+      <Card className="h-100 job-card">
+        <Card.Body className="d-flex flex-column">
+          <div className="d-flex justify-content-between align-items-start">
+            <div>
+              <Card.Title className="mb-1">{job.title}</Card.Title>
+              <Card.Subtitle className="mb-2 text-muted">
+                {job.company || 'Not specified'}
+              </Card.Subtitle>
+            </div>
+            <Badge bg="secondary" className="source-badge">
+              {job.source || 'Unknown'}
+            </Badge>
+          </div>
+          
+          {job.location && (
+            <div className="d-flex align-items-center mb-2">
+              <FaMapMarkerAlt className="me-1 text-muted" />
+              <small className="text-muted">{job.location}</small>
+            </div>
+          )}
+
+          <Card.Text className="job-preview">
+            {job.description?.substring(0, 150)}...
+          </Card.Text>
+
+          <div className="mt-auto d-flex justify-content-between align-items-end">
+            <Button 
+              variant="outline-primary" 
+              size="sm"
+              onClick={() => handleShowModal(job)}
+              className="view-details-btn"
+            >
+              <FaInfoCircle className="me-1" />
+              View Details
+            </Button>
+            
+            {job.url && (
+              <a 
+                href={job.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="job-link"
+              >
+                <FaExternalLinkAlt className="me-1" />
+                Original Post
+              </a>
+            )}
+          </div>
+
+          {user?.role?.toLowerCase() === 'admin' && (
+            <Button
+              variant="outline-danger"
+              size="sm"
+              onClick={() => handleDeleteJob(job.id)}
+              className="mt-2 delete-btn"
+            >
+              <FaTrash className="me-1" />
+              Delete
+            </Button>
+          )}
+        </Card.Body>
+      </Card>
+    </Col>
   );
 
   return (
@@ -94,7 +156,7 @@ const JobPage = () => {
             <input
               type="text"
               className="form-control"
-              placeholder="Search by skill or title"
+              placeholder="Search by job title or company"
               value={state.searchTerm}
               onChange={handleSearch}
             />
@@ -127,6 +189,53 @@ const JobPage = () => {
           {filteredJobs.map(renderJobCard)}
         </Row>
       )}
+
+      {/* Job Details Modal */}
+      <Modal show={state.showModal} onHide={handleCloseModal} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{state.selectedJob?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="mb-3">
+            <h5>{state.selectedJob?.company}</h5>
+            {state.selectedJob?.location && (
+              <div className="d-flex align-items-center text-muted mb-2">
+                <FaMapMarkerAlt className="me-1" />
+                <span>{state.selectedJob?.location}</span>
+              </div>
+            )}
+            <div className="d-flex align-items-center mb-3">
+              <Badge bg="secondary" className="me-2">
+                Source: {state.selectedJob?.source || 'Unknown'}
+              </Badge>
+              {state.selectedJob?.url && (
+                <a 
+                  href={state.selectedJob?.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-decoration-none"
+                >
+                  <Badge bg="primary">
+                    <FaExternalLinkAlt className="me-1" />
+                    Original Post
+                  </Badge>
+                </a>
+              )}
+            </div>
+          </div>
+          
+          <div className="job-description">
+            {state.selectedJob?.description?.split('\n').map((paragraph, i) => (
+              <p key={i}>{paragraph}</p>
+            ))}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };
