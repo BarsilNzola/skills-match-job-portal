@@ -84,12 +84,12 @@ const JobPage = () => {
         <Card.Body className="d-flex flex-column">
           <div className="d-flex justify-content-between align-items-start mb-2">
             <div>
-              <Card.Title className="mb-1 text-white">{job.title || 'Untitled Position'}</Card.Title>
-              {job.company && (
-                <Card.Subtitle className="mb-2 text-info">
-                  {job.company}
-                </Card.Subtitle>
-              )}
+              <Card.Title className="mb-1 text-white">
+                {job.title || 'Job Title Not Available'}
+              </Card.Title>
+              <Card.Subtitle className={`mb-2 ${job.company ? 'text-info' : 'text-muted'}`}>
+                {job.company || 'Company Not Specified'}
+              </Card.Subtitle>
             </div>
             <div className="d-flex flex-column align-items-end">
               {job.source && (
