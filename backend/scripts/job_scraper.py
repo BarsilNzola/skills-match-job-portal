@@ -164,7 +164,7 @@ def scrape_myjobmag(pages=1):
     for page_num in range(1, pages + 1):
         try:
             url = f"https://www.myjobmag.co.ke/jobs?page={page_num}"
-            print(f"[MyJobMag] Scraping page {page_num}")
+            print(f"[MyJobMag] Scraping page {page_num}", file=sys.stderr)
             
             resp = requests.get(url, headers=headers, timeout=10)
             resp.raise_for_status()
