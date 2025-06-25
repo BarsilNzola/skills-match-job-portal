@@ -1,3 +1,4 @@
+from datetime import time
 import requests
 import sys
 from bs4 import BeautifulSoup
@@ -75,17 +76,17 @@ def scrape_brightermonday(pages=1):
                             "source": "BrighterMonday",
                         })
                     except Exception as e:
-                        print(f"[brightermonday] Error processing listing: {str(e)}")
+                        print(f"[brightermonday] Error processing listing: {str(e)}", file=sys.stderr)
                         continue
 
                 # Add a small delay between pages
                 page.wait_for_timeout(2000)
 
             except PlaywrightTimeoutError:
-                print(f"[brightermonday] Timeout on page {page_num}")
+                print(f"[brightermonday] Timeout on page {page_num}", file=sys.stderr)
                 continue
             except Exception as e:
-                print(f"[brightermonday] Error on page {page_num}: {str(e)}")
+                print(f"[brightermonday] Error on page {page_num}: {str(e)}", file=sys.stderr)
                 continue
 
         # Close the context and browser
@@ -99,40 +100,122 @@ def scrape_brightermonday(pages=1):
 def scrape_jobwebkenya(pages=1):
     jobs = []
     base_url = "https://jobwebkenya.com/jobs/page/{}/"
-    for p in range(1, pages+1):
-        resp = requests.get(base_url.format(p), headers={'User-Agent': 'Mozilla/5.0'})
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        for article in soup.select('h3.job-list-title'):
-            title_elem = article.select_one('a')
-            link = title_elem['href'] if title_elem else None
-            company_elem = article.find_previous('p', class_='job-list-company')
-            jobs.append({
-                "title": title_elem.get_text(strip=True) if title_elem else "",
-                "company": company_elem.get_text(strip=True) if company_elem else "",
-                "description": "",
-                "url": link,
-                "source": "JobWebKenya"
-            })
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    for p in range(1, pages + 1):
+        try:
+            resp = requests.get(base_url.format(p), headers=headers, timeout=10)
+            resp.raise_for_status()  # Check for HTTP errors
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            
+            # Updated selector: Each job is inside <li class="job">
+            job_listings = soup.select('li.job')
+            
+            if not job_listings:
+                print(f"[JobWebKenya] No listings found on page {p}", file=sys.stderr)
+                continue
+
+            for job in job_listings:
+                try:
+                    # Extract title and URL
+                    title_elem = job.select_one('div#titlo a')
+                    if not title_elem:
+                        continue  # Skip if no title found
+                    
+                    title = title_elem.get_text(strip=True)
+                    url = title_elem['href']
+                    
+                    # Extract company name (found in div.grids)
+                    company_elem = job.select_one('div.grids')
+                    company = ""
+                    if company_elem:
+                        company_text = company_elem.get_text(strip=True)
+                        if "Company:" in company_text:
+                            company = company_text.split("Company:")[1].split("\n")[0].strip()
+                    
+                    jobs.append({
+                        "title": title,
+                        "company": company,
+                        "description": "",
+                        "url": url,
+                        "source": "JobWebKenya"
+                    })
+                except Exception as e:
+                    print(f"[JobWebKenya] Error processing a job: {e}", file=sys.stderr)
+                    continue
+
+        except requests.RequestException as e:
+            print(f"[JobWebKenya] Request failed on page {p}: {e}", file=sys.stderr)
+            continue
+        except Exception as e:
+            print(f"[JobWebKenya] Unexpected error on page {p}: {e}", file=sys.stderr)
+            continue
+
     return jobs
 
 # =========== MYJOBMAG ===========
 
 def scrape_myjobmag(pages=1):
     jobs = []
-    for p in range(1, pages+1):
-        resp = requests.get(f"https://www.myjobmag.co.ke/jobs?page={p}", headers={'User-Agent': 'Mozilla/5.0'})
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        for div in soup.select('.job-listing'):
-            title_elem = div.select_one('h2 a')
-            company_elem = div.select_one('.company')
-            link = title_elem['href'] if title_elem else None
-            jobs.append({
-                "title": title_elem.get_text(strip=True) if title_elem else "",
-                "company": company_elem.get_text(strip=True) if company_elem else "",
-                "description": "",
-                "url": link,
-                "source": "MyJobMag"
-            })
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    for page_num in range(1, pages + 1):
+        try:
+            url = f"https://www.myjobmag.co.ke/jobs?page={page_num}"
+            print(f"[MyJobMag] Scraping page {page_num}")
+            
+            resp = requests.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, 'html.parser')
+
+            # Each job listing is in <li class="job-list-li">
+            job_listings = soup.select('li.job-list-li')
+            
+            if not job_listings:
+                print(f"[MyJobMag] No listings found on page {page_num}", file=sys.stderr)
+                continue
+
+            for job in job_listings:
+                try:
+                    # Extract title and URL
+                    title_elem = job.select_one('h2 a')
+                    if not title_elem:
+                        continue
+                    
+                    title = title_elem.get_text(strip=True)
+                    url = "https://www.myjobmag.co.ke" + title_elem['href']  # Relative URLs need base
+
+                    # Extract company name (from logo alt text or link)
+                    company_elem = job.select_one('li.job-logo a img')
+                    company = company_elem['title'].replace(' logo', '') if company_elem else ""
+                    
+                    # Extract description
+                    desc_elem = job.select_one('li.job-desc')
+                    description = desc_elem.get_text(strip=True) if desc_elem else ""
+
+                    jobs.append({
+                        "title": title,
+                        "company": company,
+                        "description": description,
+                        "url": url,
+                        "source": "MyJobMag"
+                    })
+                except Exception as e:
+                    print(f"[MyJobMag] Error processing a job: {e}", file=sys.stderr)
+                    continue
+
+            # Be polite - add delay between pages
+            time.sleep(2)
+
+        except requests.RequestException as e:
+            print(f"[MyJobMag] Request failed on page {page_num}: {e}", file=sys.stderr)
+            continue
+        except Exception as e:
+            print(f"[MyJobMag] Unexpected error on page {page_num}: {e}", file=sys.stderr)
+            continue
+
     return jobs
 
 # =========== CAREER POINT KENYA ===========
@@ -154,33 +237,6 @@ def scrape_careerpointkenya(pages=1):
             })
     return jobs
 
-# =========== CAREERJET ===========
-
-def scrape_kenyamoja(pages=1):
-    jobs = []
-    base_url = "https://www.kenyamoja.com/jobs/page/{}/"
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    for p in range(1, pages + 1):
-        resp = requests.get(base_url.format(p), headers=headers, timeout=10)
-        if resp.status_code != 200:
-            print(f"[WARN] KenyaMoja page {p} returned {resp.status_code}", file=sys.stderr)
-            continue
-
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        for card in soup.select('.job-item'):
-            title_elem = card.select_one('.job-title a')
-            company_elem = card.select_one('.job-company')
-            link = title_elem['href'] if title_elem else None
-
-            jobs.append({
-                "title": title_elem.get_text(strip=True) if title_elem else "",
-                "company": company_elem.get_text(strip=True) if company_elem else "",
-                "description": "", 
-                "url": link,
-                "source": "KenyaMoja"
-            })
-    return jobs
-
 
 # =========== MASTER FUNCTION ===========
 
@@ -190,7 +246,6 @@ def get_all_jobs(pages=1):
     all_jobs.extend(scrape_jobwebkenya(pages))
     all_jobs.extend(scrape_myjobmag(pages))
     all_jobs.extend(scrape_careerpointkenya(pages))
-    all_jobs.extend(scrape_kenyamoja(pages))
     return all_jobs
 
 
