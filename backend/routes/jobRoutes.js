@@ -70,39 +70,41 @@ router.post('/post-jobs', (req, res) => {
 
 // GET all jobs (public) with optional pagination
 router.get('/', async (req, res) => {
-    try {
-        const { limit = 20, offset = 0 } = req.query;
+  const { limit = 20, offset = 0 } = req.query;
+  try {
+    const { data: jobs, error } = await supabase
+      .from('jobs')
+      .select('id, title, company, location, description, created_at')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1); // range is inclusive
 
-        const jobs = await Job.findAll({
-            attributes: ['id', 'title', 'company', 'location', 'description'],
-            limit: parseInt(limit, 10),
-            offset: parseInt(offset, 10),
-            order: [['createdAt', 'DESC']],
-        });
+    if (error) throw new Error(error.message);
 
-        return res.status(200).json(jobs);
-    } catch (error) {
-        console.error('Error fetching jobs:', error.message);
-        return res.status(500).json({ message: 'Failed to retrieve jobs.' });
-    }
+    return res.status(200).json(jobs);
+  } catch (error) {
+    console.error('Error fetching jobs:', error.message);
+    return res.status(500).json({ message: 'Failed to retrieve jobs.', error: error.message });
+  }
 });
+
 
 // GET single job (public)
 router.get('/:id', async (req, res) => {
-    try {
-        const job = await Job.findByPk(req.params.id, {
-            attributes: ['id', 'title', 'company', 'location', 'description'],
-        });
+  try {
+    const { data: job, error } = await supabase
+      .from('jobs')
+      .select('id, title, company, location, description')
+      .eq('id', req.params.id)
+      .single();
 
-        if (!job) {
-            return res.status(404).json({ message: 'Job not found' });
-        }
+    if (error) throw new Error(error.message);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
 
-        return res.status(200).json(job);
-    } catch (error) {
-        console.error('Error retrieving job:', error.message);
-        return res.status(500).json({ message: 'Error retrieving job.' });
-    }
+    return res.status(200).json(job);
+  } catch (error) {
+    console.error('Error retrieving job:', error.message);
+    return res.status(500).json({ message: 'Error retrieving job.', error: error.message });
+  }
 });
 
 module.exports = router;
