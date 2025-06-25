@@ -80,63 +80,78 @@ const JobPage = () => {
 
   const renderJobCard = job => (
     <Col key={job.id} className="mb-4">
-      <Card className="h-100 job-card">
+      <Card className="h-100 job-card bg-dark border-secondary">
         <Card.Body className="d-flex flex-column">
-          <div className="d-flex justify-content-between align-items-start">
+          <div className="d-flex justify-content-between align-items-start mb-2">
             <div>
-              <Card.Title className="mb-1 text-white">{job.title}</Card.Title>
-              <Card.Subtitle className="mb-2 text-muted">
-                {job.company || 'Not specified'}
-              </Card.Subtitle>
+              <Card.Title className="mb-1 text-white">{job.title || 'Untitled Position'}</Card.Title>
+              {job.company && (
+                <Card.Subtitle className="mb-2 text-info">
+                  {job.company}
+                </Card.Subtitle>
+              )}
             </div>
-            {job.source && (
-              <Badge bg="secondary" className="source-badge">
-                {job.source}
-              </Badge>
-            )}
+            <div className="d-flex flex-column align-items-end">
+              {job.source && (
+                <Badge bg="secondary" className="mb-1 source-badge">
+                  {job.source}
+                </Badge>
+              )}
+              {job.url && (
+                <a 
+                  href={job.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-decoration-none"
+                >
+                  <Badge bg="primary" className="url-badge">
+                    <FaExternalLinkAlt className="me-1" />
+                    Apply
+                  </Badge>
+                </a>
+              )}
+            </div>
           </div>
           
           {job.location && (
             <div className="d-flex align-items-center mb-2">
-              <FaMapMarkerAlt className="me-1 text-muted" />
+              <FaMapMarkerAlt className="me-1 text-warning" />
               <small className="text-muted">{job.location}</small>
             </div>
           )}
-
-          {job.description ? (
-            <Card.Text className="job-preview text-white-50">
-              {job.description.substring(0, 150)}...
-            </Card.Text>
-          ) : (
-            <Card.Text className="job-preview text-muted">
-              No description available
-            </Card.Text>
-          )}
-
-          <div className="mt-auto d-flex justify-content-between align-items-end">
+  
+          <div className="job-description-container mb-3">
+            {job.description ? (
+              <Card.Text className="job-preview text-white-50">
+                {job.description.substring(0, 120)}...
+              </Card.Text>
+            ) : (
+              <Card.Text className="text-muted fst-italic">
+                No description provided
+              </Card.Text>
+            )}
+          </div>
+  
+          <div className="mt-auto d-flex justify-content-between align-items-center">
             <Button 
-              variant="outline-primary" 
+              variant="outline-info" 
               size="sm"
               onClick={() => handleShowModal(job)}
               className="view-details-btn"
             >
               <FaInfoCircle className="me-1" />
-              View Details
+              Details
             </Button>
             
-            {job.url && (
-              <a 
-                href={job.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="job-link text-primary"
-              >
-                <FaExternalLinkAlt className="me-1" />
-                Original Post
-              </a>
-            )}
+            <div className="d-flex">
+              {job.postedDate && (
+                <small className="text-muted me-2">
+                  {new Date(job.postedDate).toLocaleDateString()}
+                </small>
+              )}
+            </div>
           </div>
-
+  
           {user?.role?.toLowerCase() === 'admin' && (
             <Button
               variant="outline-danger"
