@@ -16,6 +16,7 @@
     margin-bottom: 2rem !important;
     position: relative;
     display: inline-block;
+    color: white;
 }
 
 .jobs-container h1::after {
@@ -71,7 +72,7 @@
 .job-card {
     border: none;
     border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(30, 42, 50, 0.9);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     height: 100%;
@@ -85,7 +86,7 @@
 .job-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(40, 52, 60, 0.9);
 }
   
 .job-preview {
@@ -102,6 +103,7 @@
     padding: 0.35em 0.65em;
     background-color: rgba(108, 117, 125, 0.3);
     color: rgba(255, 255, 255, 0.9);
+    text-transform: capitalize;
 }
   
 .view-details-btn {
@@ -110,15 +112,18 @@
     font-size: 0.85rem;
     border-width: 1px;
     transition: all 0.2s ease;
+    color: #0d6efd;
+    border-color: #0d6efd;
 }
   
 .view-details-btn:hover {
     background-color: rgba(13, 110, 253, 0.1);
     transform: translateY(-2px);
+    color: #0d6efd;
 }
   
 .job-link {
-    color: rgba(255, 255, 255, 0.7);
+    color: #0d6efd;
     font-size: 0.85rem;
     text-decoration: none;
     transition: all 0.2s ease;
@@ -127,8 +132,9 @@
 }
   
 .job-link:hover {
-    color: #0d6efd;
+    color: #0a58ca;
     transform: translateY(-2px);
+    text-decoration: underline;
 }
   
 .delete-btn {
@@ -137,11 +143,14 @@
     font-size: 0.85rem;
     width: 100%;
     transition: all 0.2s ease;
+    color: #dc3545;
+    border-color: #dc3545;
 }
   
 .delete-btn:hover {
     background-color: rgba(220, 53, 69, 0.1);
     transform: translateY(-2px);
+    color: #dc3545;
 }
   
 /* Modal Styling */
@@ -149,14 +158,17 @@
     background-color: #1e2a32;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
+    color: white;
 }
   
 .modal-header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: #1a242a;
 }
   
 .modal-footer {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: #1a242a;
 }
   
 .modal-title {
@@ -174,13 +186,17 @@
     margin-bottom: 1rem;
 }
 
-/* Location Text */
+/* Text Colors */
+.text-white {
+    color: white !important;
+}
+
 .text-muted {
-    color: rgba(255, 255, 255, 0.6) !important;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    margin-bottom: 1rem !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.text-white-50 {
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 /* Button Styling */
@@ -193,6 +209,16 @@
     border: none;
     width: fit-content;
     align-self: flex-end;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
 }
 
 .btn-danger {

@@ -84,14 +84,16 @@ const JobPage = () => {
         <Card.Body className="d-flex flex-column">
           <div className="d-flex justify-content-between align-items-start">
             <div>
-              <Card.Title className="mb-1">{job.title}</Card.Title>
+              <Card.Title className="mb-1 text-white">{job.title}</Card.Title>
               <Card.Subtitle className="mb-2 text-muted">
                 {job.company || 'Not specified'}
               </Card.Subtitle>
             </div>
-            <Badge bg="secondary" className="source-badge">
-              {job.source || 'Unknown'}
-            </Badge>
+            {job.source && (
+              <Badge bg="secondary" className="source-badge">
+                {job.source}
+              </Badge>
+            )}
           </div>
           
           {job.location && (
@@ -101,9 +103,15 @@ const JobPage = () => {
             </div>
           )}
 
-          <Card.Text className="job-preview">
-            {job.description?.substring(0, 150)}...
-          </Card.Text>
+          {job.description ? (
+            <Card.Text className="job-preview text-white-50">
+              {job.description.substring(0, 150)}...
+            </Card.Text>
+          ) : (
+            <Card.Text className="job-preview text-muted">
+              No description available
+            </Card.Text>
+          )}
 
           <div className="mt-auto d-flex justify-content-between align-items-end">
             <Button 
@@ -121,7 +129,7 @@ const JobPage = () => {
                 href={job.url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="job-link"
+                className="job-link text-primary"
               >
                 <FaExternalLinkAlt className="me-1" />
                 Original Post
@@ -192,12 +200,12 @@ const JobPage = () => {
 
       {/* Job Details Modal */}
       <Modal show={state.showModal} onHide={handleCloseModal} size="lg" centered>
-        <Modal.Header closeButton>
-          <Modal.Title>{state.selectedJob?.title}</Modal.Title>
+        <Modal.Header closeButton className="border-secondary">
+          <Modal.Title className="text-white">{state.selectedJob?.title}</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="bg-dark">
           <div className="mb-3">
-            <h5>{state.selectedJob?.company}</h5>
+            <h5 className="text-white">{state.selectedJob?.company || 'Company not specified'}</h5>
             {state.selectedJob?.location && (
               <div className="d-flex align-items-center text-muted mb-2">
                 <FaMapMarkerAlt className="me-1" />
@@ -205,15 +213,17 @@ const JobPage = () => {
               </div>
             )}
             <div className="d-flex align-items-center mb-3">
-              <Badge bg="secondary" className="me-2">
-                Source: {state.selectedJob?.source || 'Unknown'}
-              </Badge>
+              {state.selectedJob?.source && (
+                <Badge bg="secondary" className="me-2">
+                  Source: {state.selectedJob?.source}
+                </Badge>
+              )}
               {state.selectedJob?.url && (
                 <a 
                   href={state.selectedJob?.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-decoration-none"
+                  className="text-decoration-none ms-2"
                 >
                   <Badge bg="primary">
                     <FaExternalLinkAlt className="me-1" />
@@ -225,12 +235,16 @@ const JobPage = () => {
           </div>
           
           <div className="job-description">
-            {state.selectedJob?.description?.split('\n').map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
-            ))}
+            {state.selectedJob?.description ? (
+              state.selectedJob.description.split('\n').map((paragraph, i) => (
+                <p key={i} className="text-white-50">{paragraph}</p>
+              ))
+            ) : (
+              <p className="text-muted">No description available for this job.</p>
+            )}
           </div>
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="border-secondary">
           <Button variant="secondary" onClick={handleCloseModal}>
             Close
           </Button>
