@@ -26,6 +26,7 @@ import {
   ProgressBar,
   Badge
 } from 'react-bootstrap';
+import { FaBriefcase, FaMapMarkerAlt, FaStar, FaSort, FaFilter } from 'react-icons/fa';
 import '../styles/profilePage.css';
 
 const ProfilePage = () => {
@@ -50,6 +51,8 @@ const ProfilePage = () => {
       showModal: false,
       uploadProgress: 0
     },
+    sortOption: 'match', // 'match' or 'date'
+    showSortDropdown: false,
     error: null
   });
 
@@ -263,6 +266,14 @@ const ProfilePage = () => {
     }
   };
 
+  const handleSortChange = (option) => {
+    setState(prev => ({
+      ...prev,
+      sortOption: option,
+      showSortDropdown: false
+    }));
+  };
+
   // Render helpers
   const renderAvatarSection = () => (
     <div className="avatar-container">
@@ -386,39 +397,140 @@ const ProfilePage = () => {
     </Card>
   );
 
-  const renderRecommendedJobs = () => (
-    <div className="recommended-jobs">
-      {state.recommendedJobs.length === 0 ? (
-        <Alert variant="info" className="w-100 text-center">
+  const renderRecommendedJobs = () => {
+    if (state.loading.jobs) {
+      return (
+        <div className="d-flex justify-content-center py-4">
+          <Spinner animation="border" variant="primary" />
+        </div>
+      );
+    }
+  
+    // Sort jobs based on selected option
+    const sortedJobs = [...state.recommendedJobs].sort((a, b) => {
+      if (state.sortOption === 'match') return b.similarity - a.similarity;
+      if (state.sortOption === 'date') return new Date(b.postedDate) - new Date(a.postedDate);
+      return 0;
+    });
+  
+    if (sortedJobs.length === 0) {
+      return (
+        <Alert variant="info" className="text-center">
+          <FaStar className="me-2" />
           No recommendations found. Update your skills or check back later!
         </Alert>
-      ) : (
-        state.recommendedJobs.map((job) => (
-          <Card key={job.id} className="job-card mb-4 p-3">
-            <h5>{job.title}</h5>
-            <div className="mb-2">
-              <small className="text-muted">
-                Match: <strong>{(job.similarity * 100).toFixed(0)}%</strong>
-              </small>
+      );
+    }
+  
+    return (
+      <div className="recommended-jobs-container">
+        {/* Sorting Controls */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="sort-filter-container position-relative">
+            <Button 
+              variant="outline-secondary" 
+              size="sm"
+              onClick={() => setState(prev => ({...prev, showSortDropdown: !prev.showSortDropdown}))}
+            >
+              <FaSort className="me-1" />
+              Sort: {state.sortOption === 'match' ? 'Best Match' : 'Most Recent'}
+            </Button>
+            
+            {state.showSortDropdown && (
+              <div className="sort-dropdown">
+                <div 
+                  className={`dropdown-item ${state.sortOption === 'match' ? 'active' : ''}`}
+                  onClick={() => handleSortChange('match')}
+                >
+                  Best Match
+                </div>
+                <div 
+                  className={`dropdown-item ${state.sortOption === 'date' ? 'active' : ''}`}
+                  onClick={() => handleSortChange('date')}
+                >
+                  Most Recent
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <Badge bg="secondary" pill>
+            {sortedJobs.length} jobs
+          </Badge>
+        </div>
+  
+        {/* Jobs List */}
+        {sortedJobs.map((job) => (
+          <Card key={job.id} className="recommended-job-card mb-3">
+            <Card.Body>
+              <div className="d-flex justify-content-between align-items-start">
+                <div>
+                  <Card.Title className="mb-1">{job.title}</Card.Title>
+                  <Card.Subtitle className="mb-2 text-muted">
+                    {job.company || 'Company not specified'}
+                  </Card.Subtitle>
+                </div>
+                <Badge bg="info" className="match-badge">
+                  {(job.similarity * 100).toFixed(0)}% Match
+                </Badge>
+              </div>
+  
+              {job.location && (
+                <div className="d-flex align-items-center mb-2">
+                  <FaMapMarkerAlt className="me-1 text-muted" />
+                  <small className="text-muted">{job.location}</small>
+                </div>
+              )}
+  
+              {/* Skill Matching Visualization */}
+              {job.matchedSkills?.length > 0 && (
+                <div className="skill-match-container mb-3">
+                  <small className="text-muted d-block mb-1">Matching Skills:</small>
+                  <div className="d-flex flex-wrap gap-1">
+                    {job.matchedSkills.map((skill, i) => (
+                      <Badge key={i} bg="light" text="dark" className="skill-badge">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+  
               <ProgressBar
                 now={job.similarity * 100}
-                className="mt-2"
-                label={`${(job.similarity * 100).toFixed(0)}%`}
+                variant="info"
+                className="mb-3"
+                style={{ height: '8px' }}
               />
-            </div>
-            <Button
-              variant="primary"
-              href={job.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View Job
-            </Button>
+  
+              <div className="d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center">
+                  <FaBriefcase className="me-1 text-muted" />
+                  <small className="text-muted">
+                    {job.type || 'Full-time'}
+                  </small>
+                  {job.postedDate && (
+                    <small className="text-muted ms-2">
+                      {new Date(job.postedDate).toLocaleDateString()}
+                    </small>
+                  )}
+                </div>
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  href={job.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View Job
+                </Button>
+              </div>
+            </Card.Body>
           </Card>
-        ))
-      )}
-    </div>
-  );
+        ))}
+      </div>
+    );
+  };
   
 
   return (
@@ -583,22 +695,22 @@ const ProfilePage = () => {
           </Col>
 
           {/* Right Column: Recommended Jobs */}
-          <Col md={6}>
-            <h2 className="text-center mb-4">Recommended Jobs</h2>
-
-            {state.error && (
-              <Alert variant="danger" className="text-center">
-                {state.error}
-              </Alert>
-            )}
-
-            {state.loading.jobs ? (
-              <div className="d-flex justify-content-center">
-                <Spinner animation="border" />
-              </div>
-            ) : (
-              renderRecommendedJobs()
-            )}
+          <Col md={6} lg={5} className="recommended-jobs-column">
+            <Card className="sticky-top">
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <Card.Title className="mb-0">
+                    <FaStar className="me-2 text-warning" />
+                    Recommended Jobs
+                  </Card.Title>
+                  <Badge bg="secondary" pill>
+                    {state.recommendedJobs.length}
+                  </Badge>
+                </div>
+                
+                {renderRecommendedJobs()}
+              </Card.Body>
+            </Card>
           </Col>
         </Row>
       ) : (
