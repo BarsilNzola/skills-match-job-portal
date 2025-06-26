@@ -402,6 +402,7 @@ const ProfilePage = () => {
       return (
         <div className="d-flex justify-content-center py-4">
           <Spinner animation="border" variant="primary" />
+          <span className="ms-2">Analyzing your profile...</span>
         </div>
       );
     }
@@ -409,7 +410,7 @@ const ProfilePage = () => {
     // Sort jobs based on selected option
     const sortedJobs = [...state.recommendedJobs].sort((a, b) => {
       if (state.sortOption === 'match') return b.similarity - a.similarity;
-      if (state.sortOption === 'date') return new Date(b.postedDate) - new Date(a.postedDate);
+      if (state.sortOption === 'date') return new Date(b.createdAt) - new Date(a.createdAt);
       return 0;
     });
   
@@ -417,7 +418,7 @@ const ProfilePage = () => {
       return (
         <Alert variant="info" className="text-center">
           <FaStar className="me-2" />
-          No recommendations found. Update your skills or check back later!
+          No recommendations found. Try adding more skills to your profile!
         </Alert>
       );
     }
@@ -455,7 +456,7 @@ const ProfilePage = () => {
           </div>
           
           <Badge bg="secondary" pill>
-            {sortedJobs.length} jobs
+            {sortedJobs.length} matching {sortedJobs.length === 1 ? 'job' : 'jobs'}
           </Badge>
         </div>
   
@@ -463,31 +464,99 @@ const ProfilePage = () => {
         {sortedJobs.map((job) => (
           <Card key={job.id} className="recommended-job-card mb-3">
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-start">
+              <div className="d-flex justify-content-between align-items-start mb-2">
                 <div>
                   <Card.Title className="mb-1">{job.title}</Card.Title>
                   <Card.Subtitle className="mb-2 text-muted">
                     {job.company || 'Company not specified'}
                   </Card.Subtitle>
                 </div>
-                <Badge bg="info" className="match-badge">
-                  {(job.similarity * 100).toFixed(0)}% Match
-                </Badge>
+                <div className="d-flex flex-column align-items-end">
+                  <Badge bg="info" className="match-badge mb-1">
+                    {(job.similarity * 100).toFixed(0)}% Match
+                  </Badge>
+                  {job.source && (
+                    <Badge bg="secondary" className="source-badge">
+                      {job.source}
+                    </Badge>
+                  )}
+                </div>
               </div>
   
-              {job.location && (
-                <div className="d-flex align-items-center mb-2">
-                  <FaMapMarkerAlt className="me-1 text-muted" />
-                  <small className="text-muted">{job.location}</small>
-                </div>
-              )}
+              {/* Job Metadata Row */}
+              <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                {job.location && (
+                  <div className="d-flex align-items-center">
+                    <FaMapMarkerAlt className="me-1 text-muted" />
+                    <small className="text-muted">{job.location}</small>
+                  </div>
+                )}
+                
+                {job.createdAt && (
+                  <small className="text-muted">
+                    Posted: {new Date(job.createdAt).toLocaleDateString()}
+                  </small>
+                )}
+                
+                {job.url && (
+                  <a 
+                    href={job.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary small"
+                  >
+                    <FaExternalLinkAlt className="me-1" />
+                    Original Post
+                  </a>
+                )}
+              </div>
   
-              {/* Skill Matching Visualization */}
-              {job.matchedSkills?.length > 0 && (
-                <div className="skill-match-container mb-3">
-                  <small className="text-muted d-block mb-1">Matching Skills:</small>
+              {/* Match Breakdown Visualization */}
+              <div className="match-breakdown mb-3">
+                <div className="d-flex justify-content-between mb-1">
+                  <small>Skill Match</small>
+                  <small>
+                    <strong>{(job.matchDetails?.skills * 100).toFixed(0)}%</strong>
+                  </small>
+                </div>
+                <ProgressBar
+                  now={job.matchDetails?.skills * 100 || 0}
+                  variant="success"
+                  className="mb-2"
+                />
+  
+                <div className="d-flex justify-content-between mb-1">
+                  <small>Experience Match</small>
+                  <small>
+                    <strong>{(job.matchDetails?.experience * 100).toFixed(0)}%</strong>
+                  </small>
+                </div>
+                <ProgressBar
+                  now={job.matchDetails?.experience * 100 || 0}
+                  variant="warning"
+                  className="mb-2"
+                />
+  
+                <div className="d-flex justify-content-between mb-1">
+                  <small>Education Match</small>
+                  <small>
+                    <strong>{(job.matchDetails?.education * 100).toFixed(0)}%</strong>
+                  </small>
+                </div>
+                <ProgressBar
+                  now={job.matchDetails?.education * 100 || 0}
+                  variant="info"
+                />
+              </div>
+  
+              {/* Matching Skills */}
+              {job.matchDetails?.matchedSkills && job.matchDetails.matchedSkills.length > 0 && (
+                <div className="matching-skills mb-3">
+                  <small className="text-muted d-block mb-1">
+                    Matching Skills:
+                  </small>
                   <div className="d-flex flex-wrap gap-1">
-                    {job.matchedSkills.map((skill, i) => (
+                    {job.matchDetails.matchedSkills.map((skill, i) => (
                       <Badge key={i} bg="light" text="dark" className="skill-badge">
                         {skill}
                       </Badge>
@@ -496,34 +565,19 @@ const ProfilePage = () => {
                 </div>
               )}
   
-              <ProgressBar
-                now={job.similarity * 100}
-                variant="info"
-                className="mb-3"
-                style={{ height: '8px' }}
-              />
-  
-              <div className="d-flex justify-content-between align-items-center">
-                <div className="d-flex align-items-center">
-                  <FaBriefcase className="me-1 text-muted" />
-                  <small className="text-muted">
-                    {job.type || 'Full-time'}
-                  </small>
-                  {job.postedDate && (
-                    <small className="text-muted ms-2">
-                      {new Date(job.postedDate).toLocaleDateString()}
-                    </small>
-                  )}
-                </div>
+              <div className="d-flex justify-content-between align-items-center mt-2">
                 <Button
-                  variant="outline-primary"
+                  variant="primary"
                   size="sm"
                   href={job.url}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  View Job
+                  Apply Now
                 </Button>
+                <small className="text-muted">
+                  Match confidence: <strong>{job.similarity.toFixed(2)}</strong>
+                </small>
               </div>
             </Card.Body>
           </Card>
@@ -532,7 +586,6 @@ const ProfilePage = () => {
     );
   };
   
-
   return (
     <Container fluid className="profile-container">
       <h1 className="text-center mb-4">PROFILE</h1>

@@ -44,7 +44,7 @@ async function fetchUserProfile(userId) {
 async function fetchAllJobs() {
     try {
         const jobs = await Job.findAll({
-            attributes: ['id', 'title', 'company', 'description', 'url'],
+            attributes: ['id', 'title', 'company', 'description', 'url', 'source', 'createdAt'],
             raw: true
         });
         
@@ -82,7 +82,9 @@ async function getEnhancedRecommendations(userProfile, jobs) {
                 id: job.id,
                 title: job.title,
                 company: job.company,
-                description: job.description
+                description: job.description,
+                url: job.url,
+                source: job.source
             }))
         };
 
@@ -167,7 +169,8 @@ function formatRecommendations(jobs, recommendations) {
                 matchDetails: {
                     skills: rec.details?.skills || 0,
                     experience: rec.details?.experience || 0,
-                    education: rec.details?.education || 0
+                    education: rec.details?.education || 0,
+                    matchedSkills: rec.details?.matchedSkills || []
                 }
             };
         })
