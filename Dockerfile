@@ -3,7 +3,7 @@ FROM node:20-slim
 
 # Install Python 3, pip, and Tesseract OCR
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-venv && \
+    apt-get install -y python3 python3-pip python3-venv libreoffice && \
     ln -s /usr/bin/python3 /usr/bin/python
 
 # Set working directory
