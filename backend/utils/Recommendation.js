@@ -43,30 +43,30 @@ async function fetchUserProfile(userId) {
  */
 async function fetchAllJobs() {
     try {
-        console.log('Fetching jobs from Supabase...');
+        console.log('Attempting Supabase connection...');
         
+        // Simple test query first
+        const test = await supabase.from('jobs').select('id').limit(1);
+        if (test.error) throw test.error;
         
+        // Main query
         const { data: jobs, error } = await supabase
             .from('jobs')
             .select('id, title, company, location, description, url, source, createdAt')
             .order('createdAt', { ascending: false });
 
         if (error) throw error;
-
-        if (!jobs || jobs.length === 0) {
-            console.warn('No jobs found in Supabase');
-            return [];
-        }
-
-        console.log(`Found ${jobs.length} jobs`);
-        return jobs; 
+        return jobs || [];
+        
     } catch (error) {
-        console.error('Supabase error:', {
+        console.error('Supabase Error Details:', {
             message: error.message,
             code: error.code,
-            details: error.details
+            details: error.details,
+            hint: error.hint,
+            stack: error.stack
         });
-        throw new Error('Failed to fetch jobs');
+        throw new Error(`Supabase operation failed: ${error.message}`);
     }
 }
 
