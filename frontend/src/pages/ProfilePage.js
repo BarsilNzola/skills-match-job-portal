@@ -26,7 +26,7 @@ import {
   ProgressBar,
   Badge
 } from 'react-bootstrap';
-import { FaBriefcase, FaMapMarkerAlt, FaStar, FaSort, FaFilter } from 'react-icons/fa';
+import { FaBriefcase, FaMapMarkerAlt, FaStar, FaSort, FaFilter, FaExternalLinkAlt } from 'react-icons/fa';
 import '../styles/profilePage.css';
 
 const ProfilePage = () => {
