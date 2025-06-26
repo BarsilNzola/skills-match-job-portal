@@ -78,14 +78,8 @@ def calculate_scores(user_profile, jobs):
     return debug_info
 
 if __name__ == "__main__":
-    try:
-        data = json.loads(sys.argv[1])
-        output = calculate_scores(data['user_profile'], data['jobs'])
-        print(json.dumps(output))
-    except Exception as e:
-        error_output = {
-            'error': str(e),
-            'traceback': str(sys.exc_info())
-        }
-        print(json.dumps(error_output))
-        sys.exit(1)
+    input_data = json.loads(sys.stdin.read())  # <- read from stdin
+    user_profile = input_data['user_profile']
+    jobs = input_data['jobs']
+    output = calculate_scores(user_profile, jobs)
+    print(json.dumps(output))

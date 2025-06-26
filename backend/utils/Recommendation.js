@@ -1,11 +1,11 @@
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const path = require('path');
 const supabase = require('./supabase');
 const User = require('../models/User'); // Keep Sequelize for user data if needed
 
 // Configuration
 const SIMILARITY_THRESHOLD = 0.01;
-const pythonPath = process.env.PYTHON_PATH || 'python'; // Default to 'python' if not set
+const pythonPath = process.env.PYTHON_PATH || '/opt/venv/bin/python'; 
 
 /**
  * Fetches enhanced user profile data for recommendations
@@ -79,7 +79,7 @@ async function fetchAllJobs() {
 async function getEnhancedRecommendations(userProfile, jobs) {
     return new Promise((resolve, reject) => {
         const scriptPath = path.resolve(__dirname, '../../ai-ml/recommendation/content_based_filtering.py');
-        
+
         const inputData = {
             user_profile: {
                 ...userProfile,
@@ -95,50 +95,37 @@ async function getEnhancedRecommendations(userProfile, jobs) {
             }))
         };
 
-        console.log('\n[Recommendation] Starting Python process with:');
-        console.log(`- Python Path: ${pythonPath}`);
-        console.log(`- Script Path: ${scriptPath}`);
-        console.log(`- User Skills: ${userProfile.skills.slice(0, 5).join(', ')}${userProfile.skills.length > 5 ? '...' : ''}`);
-        console.log(`- Jobs to analyze: ${jobs.length}`);
+        console.log(`Executing: ${pythonPath} ${scriptPath}`);
 
-        const command = `${pythonPath} "${scriptPath}" '${JSON.stringify(inputData)}'`;
-        console.log(`Executing: ${command}`);
+        const child = spawn(pythonPath, [scriptPath]);
 
-        exec(command, { maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
-            if (error) {
-                console.error('[Recommendation] Python execution failed:', {
-                    error: error.message,
-                    stderr: stderr.toString(),
-                    stdout: stdout.toString()
-                });
-                return reject(new Error('Python script execution failed'));
-            }
+        let stdout = '';
+        let stderr = '';
 
-            if (stderr) {
-                console.warn('[Recommendation] Python stderr:', stderr.toString());
+        child.stdout.on('data', data => { stdout += data; });
+        child.stderr.on('data', data => { stderr += data; });
+
+        child.on('close', (code) => {
+            if (code !== 0) {
+                console.error('[Recommendation] Python exited with code', code, stderr);
+                return reject(new Error(`Python script failed with code ${code}`));
             }
 
             try {
-                const result = JSON.parse(stdout);
-                
+                const result = JSON.parse(stdout.trim());
                 if (result.error) {
-                    console.error('[Recommendation] Python script error:', result.error);
-                    if (result.traceback) {
-                        console.error(result.traceback);
-                    }
-                    return reject(new Error(result.error || 'Python script returned error'));
+                    return reject(new Error(result.error));
                 }
-
-                console.log(`[Recommendation] Successfully processed ${result.results?.length || 0} jobs`);
                 resolve(result.results || []);
             } catch (e) {
-                console.error('[Recommendation] Failed to parse Python output:', {
-                    error: e.message,
-                    rawOutput: stdout
-                });
+                console.error('[Recommendation] Failed to parse Python output:', stdout, stderr);
                 reject(new Error('Invalid Python script output'));
             }
         });
+
+        // Write the inputData to stdin
+        child.stdin.write(JSON.stringify(inputData));
+        child.stdin.end();
     });
 }
 
