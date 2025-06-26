@@ -368,33 +368,28 @@ router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res
 
 router.get('/download-cv', downloadLimiter, authMiddleware, async (req, res) => {
     try {
-        const user = await User.findByPk(req.user.id);
-        if (!user || !user.cvFile) {
-            return res.status(404).json({ error: 'CV not found' });
-        }
-
-        // Extract just the path inside the bucket (remove 'user-cvs/' prefix)
-        const filePath = user.cvFile.replace(/^user-cvs\//, '');
-
-        // Create signed URL
-        const { data, error } = await supabase.storage
-            .from('user-cvs')
-            .createSignedUrl(filePath, 3600);
-
-        if (error) throw error;
-
-        // Redirect to the signed URL
-        res.redirect(data.signedUrl);
+      const user = await User.findByPk(req.user.id);
+      if (!user || !user.cvFile) {
+        return res.status(404).json({ error: 'CV not found' });
+      }
+  
+      // ✅ Use the full stored path directly
+      const { data, error } = await supabase.storage
+        .from('user-cvs')
+        .createSignedUrl(user.cvFile, 3600);
+  
+      if (error) throw error;
+  
+      res.redirect(data.signedUrl);
     } catch (error) {
-        console.error('Download error:', error);
-        res.status(500).json({ 
-            error: 'Download failed',
-            details: error.message 
-        });
+      console.error('Download error:', error);
+      res.status(500).json({ 
+        error: 'Download failed',
+        details: error.message 
+      });
     }
 });
-
-
+  
 router.post('/convert-cv', authMiddleware, async (req, res) => {
     const { format } = req.body;
     const user = await User.findByPk(req.user.id);
