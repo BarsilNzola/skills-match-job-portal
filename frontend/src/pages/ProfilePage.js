@@ -254,7 +254,8 @@ const ProfilePage = () => {
   };
 
   const handleCVDownload = () => {
-    downloadCV(); // triggers direct download via browser navigation
+    // This triggers the browser to send the cookie with the request
+    window.location.href = '/users/download-cv';
   };    
   
   const handleSortChange = (option) => {

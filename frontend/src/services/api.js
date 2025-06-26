@@ -90,8 +90,9 @@ export const uploadCV = (file) => {
 
 // Updated to handle Supabase signed URLs
 export const downloadCV = () => {
-    window.location.href = `${BASE_URL}/users/download-cv`;
+    window.location.href = '/users/download-cv';
 };
+  
 
 export const convertCV = (targetFormat) => 
     api.post('/users/convert-cv', { format: targetFormat });
