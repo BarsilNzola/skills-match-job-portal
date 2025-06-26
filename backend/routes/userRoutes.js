@@ -368,25 +368,34 @@ router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res
 
 router.get('/download-cv', downloadLimiter, authMiddleware, async (req, res) => {
     try {
-      const user = await User.findByPk(req.user.id);
-      if (!user || !user.cvFile) {
-        return res.status(404).json({ error: 'CV not found' });
-      }
-  
-      // ✅ Use the full stored path directly
-      const { data, error } = await supabase.storage
-        .from('user-cvs')
-        .createSignedUrl(user.cvFile, 3600);
-  
-      if (error) throw error;
-  
-      res.redirect(data.signedUrl);
+        // Verify user and CV existence
+        const user = await User.findByPk(req.user.id);
+        if (!user?.cvFile) {
+            return res.status(404).json({ error: 'CV not found' });
+        }
+
+        // Generate signed URL (adjust bucket name as needed)
+        const { data, error } = await supabase
+            .storage
+            .from('user-cvs') // Verify this matches your bucket name
+            .createSignedUrl(user.cvFile, 3600); // 1 hour expiry
+
+        if (error) throw error;
+        if (!data?.signedUrl) throw new Error('Failed to generate download URL');
+
+        // Return the URL instead of redirecting
+        res.json({ url: data.signedUrl });
+
     } catch (error) {
-      console.error('Download error:', error);
-      res.status(500).json({ 
-        error: 'Download failed',
-        details: error.message 
-      });
+        console.error('CV Download Error:', {
+            userId: req.user?.id,
+            error: error.message,
+            stack: error.stack
+        });
+        res.status(500).json({ 
+            error: 'Download failed',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
   

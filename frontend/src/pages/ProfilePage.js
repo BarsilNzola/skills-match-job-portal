@@ -253,9 +253,13 @@ const ProfilePage = () => {
     }
   };
 
-  const handleCVDownload = () => {
-    // This triggers the browser to send the cookie with the request
-    window.location.href = '/users/download-cv';
+  const handleCVDownload = async () => {
+    try {
+        await downloadCV();
+    } catch (error) {
+        // Display error to user
+        alert('Failed to download CV. Please try again.');
+    }
   };    
   
   const handleSortChange = (option) => {

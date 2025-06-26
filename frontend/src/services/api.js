@@ -89,11 +89,25 @@ export const uploadCV = (file) => {
 };
 
 // Updated to handle Supabase signed URLs
-export const downloadCV = () => {
-    window.location.href = '/users/download-cv';
+export const downloadCV = async () => {
+    try {
+        const response = await fetch('/users/download-cv', {
+            credentials: 'include' // Ensures cookies are sent
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to get download URL');
+        }
+
+        const { url } = await response.json();
+        window.location.href = url; // Will trigger the download
+        
+    } catch (error) {
+        console.error('Download failed:', error);
+        // Handle error (show toast, etc.)
+    }
 };
   
-
 export const convertCV = (targetFormat) => 
     api.post('/users/convert-cv', { format: targetFormat });
 
