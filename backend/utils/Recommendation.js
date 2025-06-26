@@ -44,33 +44,29 @@ async function fetchUserProfile(userId) {
 async function fetchAllJobs() {
     try {
         console.log('Fetching jobs from Supabase...');
+        
+        
         const { data: jobs, error } = await supabase
             .from('jobs')
-            .select('id, title, company, location, description, url, source, created_at')
-            .order('created_at', { ascending: false });
+            .select('id, title, company, location, description, url, source, createdAt')
+            .order('createdAt', { ascending: false });
 
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
 
         if (!jobs || jobs.length === 0) {
-            console.warn('No active jobs found in Supabase');
+            console.warn('No jobs found in Supabase');
             return [];
         }
 
-        console.log(`Found ${jobs.length} jobs in Supabase`);
-        return jobs.map(job => ({
-            ...job,
-            createdAt: job.created_at // Normalize field name
-        }));
+        console.log(`Found ${jobs.length} jobs`);
+        return jobs; 
     } catch (error) {
         console.error('Supabase error:', {
             message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code
+            code: error.code,
+            details: error.details
         });
-        throw new Error('Failed to fetch jobs from Supabase');
+        throw new Error('Failed to fetch jobs');
     }
 }
 
