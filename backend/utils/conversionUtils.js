@@ -1,100 +1,67 @@
-const { PythonShell } = require('python-shell');
-const { exec, execSync } = require('child_process');
+const { exec } = require('child_process');
 const util = require('util');
 const path = require('path');
 const fs = require('fs');
+
 const execAsync = util.promisify(exec);
+
+// Use PYTHON_PATH env or fallback to local system python
+const PYTHON_PATH = process.env.PYTHON_PATH || '/opt/venv/bin/python';
 
 async function convertPdfToDocx(inputPath, outputPath) {
     try {
-        // 1. Get the absolute path to the Python script
-        const scriptPath = path.join(
-            __dirname, // Current directory (utils)
-            '..', // Go up to backend
-            'scripts', // Down to scripts
-            'pdf_to_docx.py' // The script file
-        );
+        const scriptPath = path.resolve(__dirname, '../scripts/pdf_to_docx.py');
 
-        // 2. Verify the script exists
         if (!fs.existsSync(scriptPath)) {
-            throw new Error(`Python script not found at: ${scriptPath}\n` +
-                `Current working directory: ${process.cwd()}\n` +
-                `Make sure the script exists at backend/scripts/pdf_to_docx.py`);
+            throw new Error(`pdf_to_docx.py not found at ${scriptPath}`);
         }
 
-        // 3. Configure Python options
-        const options = {
-            pythonPath: process.platform === 'win32' ? 'python' : 'python3',
-            args: [
-                inputPath.replace(/\\/g, '\\\\'),
-                outputPath.replace(/\\/g, '\\\\')
-            ],
-            scriptPath: path.dirname(scriptPath) // Directory containing the script
-        };
+        const cmd = `${PYTHON_PATH} "${scriptPath}" "${inputPath}" "${outputPath}"`;
+        console.log('Running PDF to DOCX command:', cmd);
 
-        console.log('Conversion starting with options:', {
-            scriptLocation: scriptPath,
-            pythonPath: options.pythonPath,
-            input: options.args[0],
-            output: options.args[1]
-        });
+        const { stdout, stderr } = await execAsync(cmd);
 
-        // 4. Run the conversion
-        const results = await PythonShell.run('pdf_to_docx.py', options);
-        console.log('Python script output:', results);
+        if (stderr) console.error('Python STDERR:', stderr);
+        console.log('Python STDOUT:', stdout);
 
-        // 5. Verify output
         if (!fs.existsSync(outputPath)) {
-            throw new Error('Conversion completed but output file not found');
+            throw new Error(`Conversion succeeded but output file not found: ${outputPath}`);
         }
 
         return outputPath;
     } catch (error) {
-        console.error('Conversion failed:', {
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('PDF to DOCX conversion failed:', error);
         throw new Error(`PDF to DOCX conversion failed: ${error.message}`);
     }
 }
 
 async function convertDocxToPdf(inputPath, outputPath) {
     try {
-        // Get the absolute path to the Python script
-        const scriptPath = path.join(
-            __dirname,
-            '..', // Go up to backend
-            'scripts',
-            'docx_to_pdf.py'
-        );
+        const scriptPath = path.resolve(__dirname, '../scripts/docx_to_pdf.py');
 
-        // Verify the script exists
         if (!fs.existsSync(scriptPath)) {
-            throw new Error(`Python script not found at: ${scriptPath}`);
+            throw new Error(`docx_to_pdf.py not found at ${scriptPath}`);
         }
 
-        const options = {
-            pythonPath: process.platform === 'win32' ? 'python' : 'python3',
-            args: [inputPath, outputPath],
-            scriptPath: path.dirname(scriptPath)
-        };
+        const cmd = `${PYTHON_PATH} "${scriptPath}" "${inputPath}" "${outputPath}"`;
+        console.log('Running DOCX to PDF command:', cmd);
 
-        console.log('Executing DOCX to PDF conversion with options:', options);
-        const results = await PythonShell.run('docx_to_pdf.py', options);
-        console.log('Python output:', results);
+        const { stdout, stderr } = await execAsync(cmd);
+
+        if (stderr) console.error('Python STDERR:', stderr);
+        console.log('Python STDOUT:', stdout);
 
         if (!fs.existsSync(outputPath)) {
-            throw new Error('Conversion completed but output file not found');
+            throw new Error(`Conversion succeeded but output file not found: ${outputPath}`);
         }
 
         return outputPath;
     } catch (error) {
         console.error('DOCX to PDF conversion failed:', error);
-        throw new Error(`PDF conversion failed: ${error.message}`);
+        throw new Error(`DOCX to PDF conversion failed: ${error.message}`);
     }
 }
 
-// Export both functions
 module.exports = {
     convertPdfToDocx,
     convertDocxToPdf

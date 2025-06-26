@@ -4,7 +4,7 @@ const supabase = require('./supabase');
 const User = require('../models/User'); // Keep Sequelize for user data if needed
 
 // Configuration
-const SIMILARITY_THRESHOLD = 0.01;
+const SIMILARITY_THRESHOLD = 0.03;
 const pythonPath = process.env.PYTHON_PATH || '/opt/venv/bin/python'; 
 
 /**
