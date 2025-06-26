@@ -1,6 +1,6 @@
 const { exec } = require('child_process');
 const path = require('path');
-const { supabase } = require('./supabase');
+const supabase = require('./supabase');
 const User = require('../models/User'); // Keep Sequelize for user data if needed
 
 // Configuration
