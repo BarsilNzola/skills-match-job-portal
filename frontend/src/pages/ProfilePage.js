@@ -253,19 +253,10 @@ const ProfilePage = () => {
     }
   };
 
-  const handleCVDownload = async () => {
-    try {
-      const response = await downloadCV();
-      // Supabase returns a URL, so we can redirect directly
-      window.location.href = response.data.url;
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: "Failed to download CV."
-      }));
-    }
-  };
-
+  const handleCVDownload = () => {
+    downloadCV(); // triggers direct download via browser navigation
+  };    
+  
   const handleSortChange = (option) => {
     setState(prev => ({
       ...prev,
