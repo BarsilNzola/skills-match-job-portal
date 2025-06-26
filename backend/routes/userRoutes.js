@@ -399,52 +399,61 @@ router.post('/convert-cv', authMiddleware, async (req, res) => {
         return res.status(404).json({ error: 'CV not found' });
     }
 
-    // Download the CV file buffer
-    const { data: fileData, error } = await supabase.storage
-    .from('user-cvs')
-    .download(user.cvFile); // fileData is a Blob
-
-    // Write buffer to a temp file
-    const buffer = Buffer.from(await fileData.arrayBuffer());
-    const tempInput = path.join('/tmp', `cv-input${inputExt}`);
-    fs.writeFileSync(tempInput, buffer);
+    // === Get the extension from the existing file name ===
+    const inputExt = path.extname(user.cvFile).toLowerCase(); // e.g., '.pdf'
+    const outputExt = format === 'pdf' ? '.pdf' : '.docx';
+    const outputFilename = `converted_cv_${Date.now()}${outputExt}`;
 
     try {
-        // Convert
-        const tempOutput = path.join('/tmp', outputFilename);
-        if (inputExt === '.pdf') {
-        await convertPdfToDocx(tempInput, tempOutput);
-        } else {
-        await convertDocxToPdf(tempInput, tempOutput);
+        // === Download the CV file buffer ===
+        const { data: fileData, error } = await supabase.storage
+            .from('user-cvs')
+            .download(user.cvFile);
+
+        if (error || !fileData) {
+            throw new Error('Failed to download original CV from Supabase');
         }
 
-        // Upload back to supabase
+        const buffer = Buffer.from(await fileData.arrayBuffer());
+
+        // === Save buffer to temporary input file ===
+        const tempInput = path.join('/tmp', `cv-input${inputExt}`);
+        fs.writeFileSync(tempInput, buffer);
+
+        const tempOutput = path.join('/tmp', outputFilename);
+
+        // === Run conversion ===
+        if (inputExt === '.pdf') {
+            await convertPdfToDocx(tempInput, tempOutput);
+        } else {
+            await convertDocxToPdf(tempInput, tempOutput);
+        }
+
+        // === Upload converted file ===
         const fileBuffer = fs.readFileSync(tempOutput);
         await supabase.storage
-        .from('user-cvs')
-        .upload(`user-cvs/${user.id}/${outputFilename}`, fileBuffer, { upsert: true });
+            .from('user-cvs')
+            .upload(`user-cvs/${user.id}/${outputFilename}`, fileBuffer, { upsert: true });
 
         user.cvFile = `user-cvs/${user.id}/${outputFilename}`;
         user.cvFileType = format;
         await user.save();
 
-        // Return success with auto-download instructions
         res.json({ 
             success: true,
             message: 'Conversion successful',
             filename: outputFilename,
             downloadUrl: `/download-cv/${outputFilename}`,
-            autoDownload: true // Frontend can use this flag
+            autoDownload: true
         });
 
     } catch (error) {
         console.error('Conversion error:', error);
-        
-        // Clean up failed conversion output if it exists
-        if (fs.existsSync(outputPath)) {
-            fs.unlinkSync(outputPath);
+
+        if (fs.existsSync(tempOutput)) {
+            fs.unlinkSync(tempOutput);
         }
-        
+
         res.status(500).json({ 
             error: 'Conversion failed',
             details: error.message,
