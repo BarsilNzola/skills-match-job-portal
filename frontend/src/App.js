@@ -40,7 +40,7 @@ const AppContent = () => {
       {/* Navigation */}
       <nav className="navbar navbar-expand-lg navbar-dark" style={{ background: 'linear-gradient(to right, rgba(15, 32, 39, 0.95), rgba(44, 83, 100, 0.95)' }}>
       <div className="container-fluid">
-        <Link className="navbar-brand" to="/">Skill-Match</Link>
+        <Link className="navbar-brand" to="/">TalentPath</Link>
         <button 
           className="navbar-toggler" 
           type="button" 

@@ -9,7 +9,7 @@ const Home = () => (
             <Container className="text-center py-5">
                 <Row>
                     <Col>
-                        <h1 className="text-white display-3">Welcome to Skill-Match Job Portal</h1>
+                        <h1 className="text-white display-3">Welcome to TalentPath</h1>
                         <p className="text-white lead">Find the best job opportunities that match your skills!</p>
                         <div className="mt-4">
                             <Link to="/register">
