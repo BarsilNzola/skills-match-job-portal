@@ -1,11 +1,11 @@
-const { spawn } = require('child_process');
+const { exec } = require('child_process');
 const path = require('path');
-const Job = require('../models/Job');
-const User = require('../models/User');
 const { supabase } = require('../utils/supabase');
+const User = require('../models/User'); // Keep Sequelize for user data if needed
 
 // Configuration
 const SIMILARITY_THRESHOLD = 0.01;
+const pythonPath = process.env.PYTHON_PATH || 'python'; // Default to 'python' if not set
 
 /**
  * Fetches enhanced user profile data for recommendations
@@ -38,32 +38,44 @@ async function fetchUserProfile(userId) {
 }
 
 /**
- * Gets all active jobs from database
+ * Gets all active jobs from Supabase
  * @returns {Promise<Array>} List of jobs
  */
 async function fetchAllJobs() {
     try {
-        const jobs = await Job.findAll({
-            attributes: ['id', 'title', 'company', 'description', 'url', 'source', 'createdAt'],
-            raw: true
-        });
-        
-        if (!jobs.length) {
-            console.warn('No active jobs found in database');
+        console.log('Fetching jobs from Supabase...');
+        const { data: jobs, error } = await supabase
+            .from('jobs')
+            .select('id, title, company, location, description, url, source, created_at')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        if (!jobs || jobs.length === 0) {
+            console.warn('No active jobs found in Supabase');
             return [];
         }
 
+        console.log(`Found ${jobs.length} jobs in Supabase`);
         return jobs.map(job => ({
             ...job,
+            createdAt: job.created_at // Normalize field name
         }));
     } catch (error) {
-        console.error('Error fetching jobs:', error);
-        throw new Error('Failed to fetch jobs');
+        console.error('Supabase error:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw new Error('Failed to fetch jobs from Supabase');
     }
 }
 
 /**
- * Executes Python recommendation script
+ * Executes Python recommendation script with proper error handling
  * @param {Object} userProfile - User profile data
  * @param {Array} jobs - List of jobs
  * @returns {Promise<Array>} Recommendation results
@@ -75,7 +87,6 @@ async function getEnhancedRecommendations(userProfile, jobs) {
         const inputData = {
             user_profile: {
                 ...userProfile,
-                // Add timestamp for debugging
                 request_time: new Date().toISOString()
             },
             jobs: jobs.map(job => ({
@@ -88,58 +99,47 @@ async function getEnhancedRecommendations(userProfile, jobs) {
             }))
         };
 
-        console.log('\n[Recommendation] Starting process with:');
-        console.log(`- User ID: ${userProfile.id}`);
+        console.log('\n[Recommendation] Starting Python process with:');
+        console.log(`- Python Path: ${pythonPath}`);
+        console.log(`- Script Path: ${scriptPath}`);
         console.log(`- User Skills: ${userProfile.skills.slice(0, 5).join(', ')}${userProfile.skills.length > 5 ? '...' : ''}`);
         console.log(`- Jobs to analyze: ${jobs.length}`);
 
-        const pythonProcess = spawn('python', [
-            scriptPath, 
-            JSON.stringify(inputData)
-        ]);
+        const command = `${pythonPath} "${scriptPath}" '${JSON.stringify(inputData)}'`;
+        console.log(`Executing: ${command}`);
 
-        let output = '';
-        let errorOutput = '';
-
-        // Set timeout for Python process (5 minutes)
-        const timeout = setTimeout(() => {
-            pythonProcess.kill();
-            reject(new Error('Python process timed out after 5 minutes'));
-        }, 300000);
-
-        pythonProcess.stdout.on('data', (data) => {
-            output += data.toString();
-        });
-
-        pythonProcess.stderr.on('data', (data) => {
-            errorOutput += data.toString();
-        });
-
-        pythonProcess.on('close', (code) => {
-            clearTimeout(timeout);
-            
-            if (code !== 0) {
-                console.error(`[Recommendation] Python process exited with code ${code}`);
-                console.error('Error output:', errorOutput);
+        exec(command, { maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
+            if (error) {
+                console.error('[Recommendation] Python execution failed:', {
+                    error: error.message,
+                    stderr: stderr.toString(),
+                    stdout: stdout.toString()
+                });
                 return reject(new Error('Python script execution failed'));
             }
-            
+
+            if (stderr) {
+                console.warn('[Recommendation] Python stderr:', stderr.toString());
+            }
+
             try {
-                const result = JSON.parse(output);
+                const result = JSON.parse(stdout);
                 
                 if (result.error) {
-                    console.error('[Recommendation] Python error:', result.error);
+                    console.error('[Recommendation] Python script error:', result.error);
                     if (result.traceback) {
                         console.error(result.traceback);
                     }
-                    return reject(new Error(result.error));
+                    return reject(new Error(result.error || 'Python script returned error'));
                 }
 
                 console.log(`[Recommendation] Successfully processed ${result.results?.length || 0} jobs`);
                 resolve(result.results || []);
             } catch (e) {
-                console.error('[Recommendation] Failed to parse Python output:', e);
-                console.error('Raw output:', output);
+                console.error('[Recommendation] Failed to parse Python output:', {
+                    error: e.message,
+                    rawOutput: stdout
+                });
                 reject(new Error('Invalid Python script output'));
             }
         });
@@ -161,7 +161,10 @@ function formatRecommendations(jobs, recommendations) {
     return recommendations
         .map(rec => {
             const job = jobMap[rec.job_id];
-            if (!job) return null;
+            if (!job) {
+                console.warn(`Job ${rec.job_id} from Python not found in database`);
+                return null;
+            }
 
             return {
                 ...job,
@@ -174,7 +177,7 @@ function formatRecommendations(jobs, recommendations) {
                 }
             };
         })
-        .filter(Boolean) // Remove null entries
+        .filter(Boolean)
         .sort((a, b) => b.similarity - a.similarity)
         .filter(job => job.similarity >= SIMILARITY_THRESHOLD);
 }
@@ -186,7 +189,7 @@ function formatRecommendations(jobs, recommendations) {
  */
 async function calculateJobRecommendations(userId) {
     try {
-        console.log(`\n[Recommendation] Starting for user ${userId}`);
+        console.log(`\n[Recommendation] Starting recommendation process for user ${userId}`);
         
         // 1. Fetch user profile
         const userProfile = await fetchUserProfile(userId);
@@ -195,7 +198,12 @@ async function calculateJobRecommendations(userId) {
             return [];
         }
 
-        // 2. Fetch active jobs
+        if (!userProfile.skills || userProfile.skills.length === 0) {
+            console.log('[Recommendation] User has no skills - returning empty results');
+            return [];
+        }
+
+        // 2. Fetch active jobs from Supabase
         const jobs = await fetchAllJobs();
         if (!jobs.length) {
             console.log('[Recommendation] No jobs available - returning empty results');
@@ -209,15 +217,22 @@ async function calculateJobRecommendations(userId) {
         const formattedResults = formatRecommendations(jobs, recommendations);
 
         // Debug output
-        console.log('\n[Recommendation] Top 5 recommendations:');
-        formattedResults.slice(0, 5).forEach((job, i) => {
-            console.log(`${i + 1}. ${job.title} (${job.company}) - Score: ${job.similarity.toFixed(3)}`);
-        });
-        console.log(`[Recommendation] Total recommendations: ${formattedResults.length}`);
+        console.log('\n[Recommendation] Recommendation results:');
+        if (formattedResults.length > 0) {
+            console.log(`Top 5 recommendations:`);
+            formattedResults.slice(0, 5).forEach((job, i) => {
+                console.log(`${i + 1}. ${job.title} (${job.company}) - Score: ${job.similarity.toFixed(3)}`);
+                console.log(`   Matching Skills: ${job.matchDetails.matchedSkills.slice(0, 3).join(', ')}${job.matchDetails.matchedSkills.length > 3 ? '...' : ''}`);
+            });
+        }
+        console.log(`Total recommendations: ${formattedResults.length}`);
 
         return formattedResults;
     } catch (error) {
-        console.error('[Recommendation] Error in calculateJobRecommendations:', error);
+        console.error('[Recommendation] Error in calculateJobRecommendations:', {
+            error: error.message,
+            stack: error.stack
+        });
         return []; // Return empty array on error
     }
 }
@@ -228,6 +243,7 @@ module.exports = {
     _test: {
         fetchUserProfile,
         fetchAllJobs,
-        formatRecommendations
+        formatRecommendations,
+        getEnhancedRecommendations
     }
 };
