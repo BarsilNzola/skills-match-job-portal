@@ -52,6 +52,8 @@ app.use('/jobs', jobRoutes);
 app.use('/applications', applicationRoutes);
 app.use('/api/admin', adminRoutes);
 
+app.use(rateLimit());
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 

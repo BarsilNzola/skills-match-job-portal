@@ -15,9 +15,16 @@ const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 
 const downloadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 downloads per windowMs
-  message: 'Too many download requests, please try again later'
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Too many download requests, please try again later',
+    keyGenerator: (req) => {
+      // Use the right-most IP in X-Forwarded-For (closest to client)
+      const xff = req.headers['x-forwarded-for'];
+      return xff 
+        ? xff.split(',')[0].trim() 
+        : req.ip;
+    }
 });
 
 const convertLimiter = rateLimit({
