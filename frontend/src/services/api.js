@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 // Configure base URL based on environment
 const BASE_URL = process.env.NODE_ENV === 'production'
