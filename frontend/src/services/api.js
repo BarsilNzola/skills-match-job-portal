@@ -86,42 +86,31 @@ export const uploadCV = (file) => {
 // Updated to handle Supabase signed URLs
 export const downloadCV = async () => {
     try {
-        // 1. Get the file URL through our authenticated API
-        const { data: { url } } = await api.get('/users/download-cv');
-        
-        // 2. Fetch the file (will automatically include auth via interceptor)
-        const fileResponse = await api.get(url, { 
-            responseType: 'blob' // Crucial for binary files
-        });
-
-        // 3. Extract filename (multiple fallback sources)
-        const contentDisposition = fileResponse.headers['content-disposition'];
-        const filename = contentDisposition?.match(/filename="?(.+)"?/)?.[1] 
-                       || url.split('/').pop().split('?')[0]
-                       || 'document';
-
-        // 4. Trigger download
-        const blob = new Blob([fileResponse.data]);
-        const blobUrl = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-
-        // Cleanup
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(blobUrl);
-        }, 100);
-
+      // 1. Get signed download URL and filename
+      const { data: { url, filename } } = await api.get('/users/download-cv');
+  
+      // 2. Fetch the binary data as a Blob
+      const fileResponse = await fetch(url); // Don't use Axios here!
+      const blob = await fileResponse.blob();
+  
+      // 3. Create a download link
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename || 'document';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+  
+      // 4. Cleanup
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
     } catch (error) {
-        console.error('Download failed:', error);
-        throw error;
+      console.error('Download failed:', error);
+      toast.error('Failed to download CV. Please try again.');
     }
 };
-  
+    
 export const convertCV = (targetFormat) => 
     api.post('/users/convert-cv', { format: targetFormat });
 
