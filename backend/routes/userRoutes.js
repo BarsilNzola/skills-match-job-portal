@@ -376,29 +376,42 @@ router.post('/upload-cv', authMiddleware, uploadCV.single('cv'), async (req, res
 router.get('/download-cv', downloadLimiter, authMiddleware, async (req, res) => {
     try {
         // Verify user and CV existence
-        const user = await User.findByPk(req.user.id);
+        const user = await User.findByPk(req.user.id, {
+            attributes: ['id', 'name', 'cvFile', 'cvFileType'] // Include cvFileType if you store it
+        });
+        
         if (!user?.cvFile) {
             return res.status(404).json({ error: 'CV not found' });
         }
 
-        // Generate signed URL (adjust bucket name as needed)
+        // Generate signed URL
         const { data, error } = await supabase
             .storage
-            .from('user-cvs') // Verify this matches your bucket name
-            .createSignedUrl(user.cvFile, 3600); // 1 hour expiry
+            .from('user-cvs')
+            .createSignedUrl(user.cvFile, 3600);
 
         if (error) throw error;
         if (!data?.signedUrl) throw new Error('Failed to generate download URL');
 
-        // Return the URL instead of redirecting
-        res.json({ url: data.signedUrl });
+        // Extract file extension (fallback to pdf if unknown)
+        const fileExt = user.cvFileType 
+            || user.cvFile.split('.').pop() 
+            || 'pdf';
+            
+        // Sanitize username for filename
+        const sanitizedName = user.name
+            .toLowerCase()
+            .replace(/\s+/g, '_')  // Replace spaces with underscores
+            .replace(/[^a-z0-9_]/g, ''); // Remove special chars
+
+        // Return URL with suggested filename
+        res.json({
+            url: data.signedUrl,
+            filename: `${sanitizedName}_cv.${fileExt}`
+        });
 
     } catch (error) {
-        console.error('CV Download Error:', {
-            userId: req.user?.id,
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('CV Download Error:', error);
         res.status(500).json({ 
             error: 'Download failed',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined

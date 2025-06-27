@@ -87,7 +87,17 @@ export const uploadCV = (file) => {
 export const downloadCV = async () => {
     try {
         const response = await api.get('/users/download-cv');
-        window.location.href = response.data.url;
+        const { url, filename } = response.data;
+
+        // Create hidden anchor tag
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'my_cv.pdf'; // Fallback filename
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
     } catch (error) {
         console.error('Download failed:', error);
         throw error;
