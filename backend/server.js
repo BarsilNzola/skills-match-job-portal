@@ -31,6 +31,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+app.set('trust proxy', true);
+
 // Handle preflight requests
 app.options('*', cors());
 
