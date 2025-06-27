@@ -86,28 +86,35 @@ export const uploadCV = (file) => {
 // Updated to handle Supabase signed URLs
 export const downloadCV = async () => {
     try {
-        // 1. Get the signed URL
-        const response = await api.get('/users/download-cv');
-        const { url } = response.data;
+        // 1. Get the file URL through our authenticated API
+        const { data: { url } } = await api.get('/users/download-cv');
+        
+        // 2. Fetch the file (will automatically include auth via interceptor)
+        const fileResponse = await api.get(url, { 
+            responseType: 'blob' // Crucial for binary files
+        });
 
-        // 2. Extract ACTUAL filename from URL as fallback
-        const urlParts = url.split('/');
-        const originalFilename = urlParts[urlParts.length - 1].split('?')[0]; // removes URL params
-        const fileExt = originalFilename.split('.').pop(); // gets 'docx' or 'pdf'
-
-        // 3. Create filename (use backend's suggestion or generate from URL)
-        const suggestedName = response.data.filename 
-            || `user_cv.${fileExt}` 
-            || 'my_cv.pdf';  // Final fallback
+        // 3. Extract filename (multiple fallback sources)
+        const contentDisposition = fileResponse.headers['content-disposition'];
+        const filename = contentDisposition?.match(/filename="?(.+)"?/)?.[1] 
+                       || url.split('/').pop().split('?')[0]
+                       || 'document';
 
         // 4. Trigger download
+        const blob = new Blob([fileResponse.data]);
+        const blobUrl = URL.createObjectURL(blob);
+        
         const a = document.createElement('a');
-        a.href = url;
-        a.download = suggestedName;
-        a.style.display = 'none';
+        a.href = blobUrl;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        }, 100);
 
     } catch (error) {
         console.error('Download failed:', error);
