@@ -86,33 +86,28 @@ export const uploadCV = (file) => {
 // Updated to handle Supabase signed URLs
 export const downloadCV = async () => {
     try {
-        // 1. Get the file as a blob
-        const response = await api.get('/users/download-cv', {
-            responseType: 'blob' // Important!
-        });
+        // 1. Get the signed URL
+        const response = await api.get('/users/download-cv');
+        const { url } = response.data;
 
-        // 2. Create a local URL for the blob
-        const blob = new Blob([response.data]);
-        const url = window.URL.createObjectURL(blob);
+        // 2. Extract ACTUAL filename from URL as fallback
+        const urlParts = url.split('/');
+        const originalFilename = urlParts[urlParts.length - 1].split('?')[0]; // removes URL params
+        const fileExt = originalFilename.split('.').pop(); // gets 'docx' or 'pdf'
 
-        // 3. Extract filename from headers or generate it
-        const contentDisposition = response.headers['content-disposition'];
-        const filename = contentDisposition 
-            ? contentDisposition.split('filename=')[1] 
-            : 'my_cv.pdf';
+        // 3. Create filename (use backend's suggestion or generate from URL)
+        const suggestedName = response.data.filename 
+            || `user_cv.${fileExt}` 
+            || 'my_cv.pdf';  // Final fallback
 
         // 4. Trigger download
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-
-        // 5. Clean up
-        setTimeout(() => {
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        }, 100);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = suggestedName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
     } catch (error) {
         console.error('Download failed:', error);
