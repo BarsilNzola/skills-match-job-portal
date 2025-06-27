@@ -87,28 +87,30 @@ export const uploadCV = (file) => {
 // Updated to handle Supabase signed URLs
 export const downloadCV = async () => {
     try {
-      // 1. Get signed download URL and filename
+      // Step 1: Get the signed URL and filename (from your backend)
       const { data: { url, filename } } = await api.get('/users/download-cv');
   
-      // 2. Fetch the binary data as a Blob
-      const fileResponse = await fetch(url); // Don't use Axios here!
-      const blob = await fileResponse.blob();
+      // Step 2: Fetch the file as a blob (don't use Axios — use native fetch)
+      const response = await fetch(url);
+      const blob = await response.blob();
   
-      // 3. Create a download link
+      // Step 3: Create a temporary <a> link to download
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = filename || 'document';
+      a.download = filename || 'document'; // e.g., myname_cv.pdf or myname_cv.docx
       a.style.display = 'none';
+  
+      // Step 4: Trigger the download without redirect
       document.body.appendChild(a);
       a.click();
   
-      // 4. Cleanup
+      // Step 5: Clean up
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Download failed:', error);
-      toast.error('Failed to download CV. Please try again.');
+      toast?.error?.('Failed to download CV. Please try again.');
     }
 };
     

@@ -318,7 +318,7 @@ const ProfilePage = () => {
           <>
             <p>Current CV: {state.user.cvFile} ({state.user.cvFileType?.toUpperCase()})</p>
             <div className="d-flex flex-wrap gap-2 mb-3">
-              <Button variant="success" onClick={handleCVDownload}>
+              <Button variant="success" onClick={downloadCV}>
                 Download CV
               </Button>
               
