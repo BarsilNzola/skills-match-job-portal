@@ -86,17 +86,33 @@ export const uploadCV = (file) => {
 // Updated to handle Supabase signed URLs
 export const downloadCV = async () => {
     try {
-        const response = await api.get('/users/download-cv');
-        const { url, filename } = response.data;
+        // 1. Get the file as a blob
+        const response = await api.get('/users/download-cv', {
+            responseType: 'blob' // Important!
+        });
 
-        // Create hidden anchor tag
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || 'my_cv.pdf'; // Fallback filename
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        // 2. Create a local URL for the blob
+        const blob = new Blob([response.data]);
+        const url = window.URL.createObjectURL(blob);
+
+        // 3. Extract filename from headers or generate it
+        const contentDisposition = response.headers['content-disposition'];
+        const filename = contentDisposition 
+            ? contentDisposition.split('filename=')[1] 
+            : 'my_cv.pdf';
+
+        // 4. Trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+
+        // 5. Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }, 100);
 
     } catch (error) {
         console.error('Download failed:', error);
