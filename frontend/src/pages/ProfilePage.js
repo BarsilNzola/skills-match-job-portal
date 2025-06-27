@@ -61,14 +61,20 @@ const ProfilePage = () => {
     try {
       setState(prev => ({ ...prev, loading: { ...prev.loading, profile: true } }));
       const response = await fetchUserProfile();
-      
+  
+      // 👇 If profileImage is missing, fetch it properly
+      let profileImage = response.data.profileImage;
+      if (!profileImage) {
+        profileImage = await getAvatarUrl(response.data.id); // Now it's a string
+      }
+  
       setState(prev => ({
         ...prev,
         user: {
           ...response.data,
           skills: response.data.skills || [],
           profile: response.data.profile || { education: '', experience: '', projects: [] },
-          profileImage: response.data.profileImage || getAvatarUrl(response.data.id),
+          profileImage: profileImage,
           cvFile: response.data.cvFile || null,
           cvFileType: response.data.cvFileType || null
         },
@@ -88,6 +94,7 @@ const ProfilePage = () => {
       console.error("Error fetching user profile:", error);
     }
   }, []);
+  
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -200,7 +207,11 @@ const ProfilePage = () => {
           );
           setState(prev => ({
             ...prev,
-            ui: { ...prev.ui, uploadProgress: percentCompleted }
+            user: {
+              ...prev.user,
+              cvFile: `user-cvs/${prev.user.id}/${file.name}`,
+              cvFileType: file.type
+            }
           }));
         }
       });
