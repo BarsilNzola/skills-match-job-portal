@@ -7,20 +7,16 @@ const BASE_URL = process.env.NODE_ENV === 'production'
 
 const api = axios.create({
     baseURL: BASE_URL,
-    withCredentials: true,
 });
 
 // Interceptors for adding Authorization header
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
+api.interceptors.request.use(config => {
+    const token = sessionStorage.getItem('authToken'); // More secure than localStorage
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
 
 // Interceptor for handling token expiry
 api.interceptors.response.use(
@@ -46,11 +42,10 @@ export const registerUser = (userData) => api.post('/users/register', userData).
 export const loginUser = async (userData) => {
     try {
         const response = await api.post('/users/login', userData);
-        const token = response.data.token;
-        localStorage.setItem('authToken', token);
+        sessionStorage.setItem('authToken', response.data.token);
         return response;
     } catch (error) {
-        return Promise.reject(handleApiError(error));
+        return handleApiError(error);
     }
 };
 
@@ -91,20 +86,11 @@ export const uploadCV = (file) => {
 // Updated to handle Supabase signed URLs
 export const downloadCV = async () => {
     try {
-        const response = await fetch('/users/download-cv', {
-            credentials: 'include' // Ensures cookies are sent
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to get download URL');
-        }
-
-        const { url } = await response.json();
-        window.location.href = url; // Will trigger the download
-        
+        const response = await api.get('/users/download-cv');
+        window.location.href = response.data.url;
     } catch (error) {
         console.error('Download failed:', error);
-        // Handle error (show toast, etc.)
+        throw error;
     }
 };
   
