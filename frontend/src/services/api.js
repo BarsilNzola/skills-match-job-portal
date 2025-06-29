@@ -38,7 +38,13 @@ const handleApiError = (error) => {
 };
 
 // User-related API functions
-export const registerUser = (userData) => api.post('/users/register', userData).catch(handleApiError);
+export const registerUser = async (userData) => {
+    try {
+        return await api.post('/users/register', userData);
+    } catch (error) {
+        throw error.response || { data: { error: 'Unknown error occurred' } };
+    }
+};
 
 export const loginUser = async (userData) => {
     try {

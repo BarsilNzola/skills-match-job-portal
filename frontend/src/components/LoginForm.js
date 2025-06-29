@@ -9,6 +9,8 @@ const LoginForm = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
     const [loading, setLoading] = useState(false); // Loading state
     const navigate = useNavigate();
     const { login } = useAuth();
@@ -16,6 +18,8 @@ const LoginForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
+        setEmailError('');
+        setPasswordError('');
         setLoading(true); // Set loading state
 
         try {
@@ -23,8 +27,11 @@ const LoginForm = () => {
             login(response.data.token);
             navigate('/profile');
         } catch (error) {
+            const message = error.response?.data?.error || 'Login failed. Please try again.';
             console.error('Login Failed', error);
-            setError(error.response?.data?.message || 'Login failed, please try again.');
+            if (message.toLowerCase().includes('email')) setEmailError(message);
+            else if (message.toLowerCase().includes('password')) setPasswordError(message);
+            else setError(message);
         } finally {
             setLoading(false); // Reset loading state
         }
@@ -36,6 +43,7 @@ const LoginForm = () => {
                 <h2 className="text-center mb-4">Login</h2>
                 <form onSubmit={handleSubmit}>
                     {error && <div className="alert alert-danger">{error}</div>}
+                    {/* Email Input */}
                     <div className="input-group mb-3">
                         <span className="input-group-text">
                             <FaEnvelope />
@@ -49,6 +57,9 @@ const LoginForm = () => {
                             required
                         />
                     </div>
+                    {emailError && <div className="text-danger mb-2">{emailError}</div>}
+
+                    {/* Password Input */}
                     <div className="input-group mb-3">
                         <span className="input-group-text">
                             <FaLock />
@@ -62,6 +73,7 @@ const LoginForm = () => {
                             required
                         />
                     </div>
+                    {passwordError && <div className="text-danger mb-2">{passwordError}</div>}
                     <button type="submit" className="btn btn-primary w-100" disabled={loading}>
                         {loading ? <div className="spinner-border spinner-border-sm" role="status"></div> : 'Login'}
                     </button>

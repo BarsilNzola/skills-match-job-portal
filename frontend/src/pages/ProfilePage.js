@@ -196,10 +196,10 @@ const ProfilePage = () => {
   const handleCVUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+  
     try {
       setState(prev => ({ ...prev, loading: { ...prev.loading, cv: true } }));
-      
+  
       await uploadCV(file, {
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
@@ -215,9 +215,14 @@ const ProfilePage = () => {
           }));
         }
       });
-
-      await fetchProfile(); // Refresh profile data
+  
+      await fetchProfile(); // Optional: You can remove this if reload will handle it
+  
       toast.success("CV uploaded successfully!");
+  
+      // ✅ Force a full page refresh to reflect CV update everywhere
+      setTimeout(() => window.location.reload(), 1000); // slight delay to allow toast to appear
+  
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -232,6 +237,7 @@ const ProfilePage = () => {
       e.target.value = '';
     }
   };
+  
 
   const handleCVConversion = async (targetFormat) => {
     const conversionKey = targetFormat === 'pdf' ? 'pdf' : 'docx';

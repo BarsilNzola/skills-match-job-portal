@@ -9,6 +9,9 @@ const RegisterForm = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
+    const [nameError, setNameError] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
     const [success, setSuccess] = useState(null);
     const [loading, setLoading] = useState(false); // Loading state
     const navigate = useNavigate();
@@ -17,6 +20,9 @@ const RegisterForm = () => {
         e.preventDefault();
         setError(null);
         setSuccess(null);
+        setNameError('');
+        setEmailError('');
+        setPasswordError('');
         setLoading(true); // Set loading state
 
         try {
@@ -26,7 +32,13 @@ const RegisterForm = () => {
                 navigate('/login');
             }, 2000);
         } catch (error) {
-            setError('Registration failed. Please try again.');
+            const message = error?.response?.data?.error || 'Registration failed. Please try again.';
+
+            // Check for field-specific error content
+            if (message.toLowerCase().includes('name')) setNameError(message);
+            else if (message.toLowerCase().includes('email')) setEmailError(message);
+            else if (message.toLowerCase().includes('password')) setPasswordError(message);
+            else setError(message);
             console.error('Registration Failed', error);
         } finally {
             setLoading(false); // Reset loading state
@@ -40,6 +52,7 @@ const RegisterForm = () => {
                 <form onSubmit={handleSubmit}>
                     {error && <div className="alert alert-danger">{error}</div>}
                     {success && <div className="alert alert-success">{success}</div>}
+                    {/* Name Input */}
                     <div className="input-group mb-3">
                         <span className="input-group-text">
                             <FaUser />
@@ -53,6 +66,9 @@ const RegisterForm = () => {
                             required
                         />
                     </div>
+                    {nameError && <div className="text-danger mb-2">{nameError}</div>}
+
+                    {/* Email Input */}
                     <div className="input-group mb-3">
                         <span className="input-group-text">
                             <FaEnvelope />
@@ -66,6 +82,9 @@ const RegisterForm = () => {
                             required
                         />
                     </div>
+                    {emailError && <div className="text-danger mb-2">{emailError}</div>}
+
+                    {/* Password Input */}
                     <div className="input-group mb-3">
                         <span className="input-group-text">
                             <FaLock />
@@ -79,6 +98,7 @@ const RegisterForm = () => {
                             required
                         />
                     </div>
+                    {passwordError && <div className="text-danger mb-2">{passwordError}</div>}
                     <button type="submit" className="btn btn-primary w-100" disabled={loading}>
                         {loading ? <div className="spinner-border spinner-border-sm" role="status"></div> : 'Register'}
                     </button>
