@@ -71,101 +71,10 @@ const JobPage = () => {
     }
   };
 
-  // Filter jobs
   const filteredJobs = state.jobs.filter(
     job =>
       job.title?.toLowerCase().includes(state.searchTerm.toLowerCase()) &&
       (job.location ? job.location.toLowerCase().includes(state.location.toLowerCase()) : true)
-  );
-
-  const renderJobCard = job => (
-    <Col key={job.id} className="mb-4">
-      <Card className="h-100 job-card bg-dark border-secondary">
-        <Card.Body className="d-flex flex-column">
-          <div className="d-flex justify-content-between align-items-start mb-2">
-            <div>
-              <Card.Title className="mb-1 text-white">
-                {job.title || 'Job Title Not Available'}
-              </Card.Title>
-              <Card.Subtitle className={`mb-2 ${job.company ? 'text-info' : 'text-muted'}`}>
-                {job.company || 'Company Not Specified'}
-              </Card.Subtitle>
-            </div>
-            <div className="d-flex flex-column align-items-end">
-              {job.source && (
-                <Badge bg="secondary" className="mb-1 source-badge">
-                  {job.source}
-                </Badge>
-              )}
-              {job.url && (
-                <a 
-                  href={job.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-decoration-none"
-                >
-                  <Badge bg="primary" className="url-badge">
-                    <FaExternalLinkAlt className="me-1" />
-                    Apply
-                  </Badge>
-                </a>
-              )}
-            </div>
-          </div>
-          
-          {job.location && (
-            <div className="d-flex align-items-center mb-2">
-              <FaMapMarkerAlt className="me-1 text-warning" />
-              <small className="text-muted">{job.location}</small>
-            </div>
-          )}
-  
-          <div className="job-description-container mb-3">
-            {job.description ? (
-              <Card.Text className="job-preview text-white-50">
-                {job.description.substring(0, 120)}...
-              </Card.Text>
-            ) : (
-              <Card.Text className="text-muted fst-italic">
-                No description provided
-              </Card.Text>
-            )}
-          </div>
-  
-          <div className="mt-auto d-flex justify-content-between align-items-center">
-            <Button 
-              variant="outline-info" 
-              size="sm"
-              onClick={() => handleShowModal(job)}
-              className="view-details-btn"
-            >
-              <FaInfoCircle className="me-1" />
-              Details
-            </Button>
-            
-            <div className="d-flex">
-              {job.postedDate && (
-                <small className="text-muted me-2">
-                  {new Date(job.postedDate).toLocaleDateString()}
-                </small>
-              )}
-            </div>
-          </div>
-  
-          {user?.role?.toLowerCase() === 'admin' && (
-            <Button
-              variant="outline-danger"
-              size="sm"
-              onClick={() => handleDeleteJob(job.id)}
-              className="mt-2 delete-btn"
-            >
-              <FaTrash className="me-1" />
-              Delete
-            </Button>
-          )}
-        </Card.Body>
-      </Card>
-    </Col>
   );
 
   return (
@@ -209,18 +118,96 @@ const JobPage = () => {
         <Alert variant="info" className="text-center">No jobs found matching your criteria</Alert>
       ) : (
         <Row xs={1} md={2} lg={3} className="g-4">
-          {filteredJobs.map(renderJobCard)}
+          {filteredJobs.map(job => (
+            <Col key={job.id} className="mb-4">
+              <Card className="h-100 job-card">
+                <Card.Body className="d-flex flex-column">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <Card.Title className="mb-1">{job.title || 'Job Title Not Available'}</Card.Title>
+                      <Card.Subtitle className="mb-2 text-info">
+                        {job.company || 'Company Not Specified'}
+                      </Card.Subtitle>
+                    </div>
+                    <div className="d-flex flex-column align-items-end">
+                      {job.source && (
+                        <Badge bg="secondary" className="mb-1 source-badge">
+                          {job.source}
+                        </Badge>
+                      )}
+                      {job.url && (
+                        <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-decoration-none">
+                          <Badge bg="primary" className="url-badge">
+                            <FaExternalLinkAlt className="me-1" />
+                            Apply
+                          </Badge>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {job.location && (
+                    <div className="d-flex align-items-center mb-2">
+                      <FaMapMarkerAlt className="me-1" />
+                      <small className="text-muted">{job.location}</small>
+                    </div>
+                  )}
+        
+                  <div className="job-description-container mb-3">
+                    {job.description ? (
+                      <Card.Text className="text-white-50">
+                        {job.description.substring(0, 120)}...
+                      </Card.Text>
+                    ) : (
+                      <Card.Text className="text-muted fst-italic">
+                        No description provided
+                      </Card.Text>
+                    )}
+                  </div>
+        
+                  <div className="mt-auto d-flex justify-content-between align-items-center">
+                    <Button 
+                      variant="outline-info" 
+                      size="sm"
+                      onClick={() => handleShowModal(job)}
+                      className="view-details-btn"
+                    >
+                      <FaInfoCircle className="me-1" />
+                      Details
+                    </Button>
+                    
+                    {job.postedDate && (
+                      <small className="text-muted">
+                        {new Date(job.postedDate).toLocaleDateString()}
+                      </small>
+                    )}
+                  </div>
+        
+                  {user?.role?.toLowerCase() === 'admin' && (
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={() => handleDeleteJob(job.id)}
+                      className="mt-2 delete-btn"
+                    >
+                      <FaTrash className="me-1" />
+                      Delete
+                    </Button>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
         </Row>
       )}
 
-      {/* Job Details Modal */}
       <Modal show={state.showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton className="border-secondary">
-          <Modal.Title className="text-white">{state.selectedJob?.title}</Modal.Title>
+          <Modal.Title>{state.selectedJob?.title}</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="bg-dark">
+        <Modal.Body>
           <div className="mb-3">
-            <h5 className="text-white">{state.selectedJob?.company || 'Company not specified'}</h5>
+            <h5 className="text-info">{state.selectedJob?.company || 'Company not specified'}</h5>
             {state.selectedJob?.location && (
               <div className="d-flex align-items-center text-muted mb-2">
                 <FaMapMarkerAlt className="me-1" />
@@ -229,18 +216,13 @@ const JobPage = () => {
             )}
             <div className="d-flex align-items-center mb-3">
               {state.selectedJob?.source && (
-                <Badge bg="secondary" className="me-2">
+                <Badge bg="secondary" className="me-2 source-badge">
                   Source: {state.selectedJob?.source}
                 </Badge>
               )}
               {state.selectedJob?.url && (
-                <a 
-                  href={state.selectedJob?.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-decoration-none ms-2"
-                >
-                  <Badge bg="primary">
+                <a href={state.selectedJob?.url} target="_blank" rel="noopener noreferrer" className="text-decoration-none ms-2">
+                  <Badge bg="primary" className="url-badge">
                     <FaExternalLinkAlt className="me-1" />
                     Original Post
                   </Badge>

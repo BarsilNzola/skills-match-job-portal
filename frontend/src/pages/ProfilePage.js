@@ -51,21 +51,19 @@ const ProfilePage = () => {
       showModal: false,
       uploadProgress: 0
     },
-    sortOption: 'match', // 'match' or 'date'
+    sortOption: 'match',
     showSortDropdown: false,
     error: null
   });
 
-  // Memoized fetch functions
   const fetchProfile = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, loading: { ...prev.loading, profile: true } }));
       const response = await fetchUserProfile();
   
-      // 👇 If profileImage is missing, fetch it properly
       let profileImage = response.data.profileImage;
       if (!profileImage) {
-        profileImage = await getAvatarUrl(response.data.id); // Now it's a string
+        profileImage = await getAvatarUrl(response.data.id);
       }
   
       setState(prev => ({
@@ -116,7 +114,6 @@ const ProfilePage = () => {
     }
   }, []);
 
-  // Initial data loading
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
@@ -127,7 +124,6 @@ const ProfilePage = () => {
     }
   }, [state.user, fetchJobs]);
 
-  // Handlers
   const handleSaveProfile = async () => {
     try {
       const updatedSkills = state.skills.split(',').map(skill => skill.trim());
@@ -216,12 +212,9 @@ const ProfilePage = () => {
         }
       });
   
-      await fetchProfile(); // Optional: You can remove this if reload will handle it
-  
+      await fetchProfile();
       toast.success("CV uploaded successfully!");
-  
-      // ✅ Force a full page refresh to reflect CV update everywhere
-      setTimeout(() => window.location.reload(), 1000); // slight delay to allow toast to appear
+      setTimeout(() => window.location.reload(), 1000);
   
     } catch (error) {
       setState(prev => ({
@@ -252,9 +245,7 @@ const ProfilePage = () => {
       const { data } = await convertCV(targetFormat);
       
       if (data.success) {
-        // In a real app, you might want to handle the download differently
-        // since Supabase returns URLs directly
-        await fetchProfile(); // Refresh to get updated CV info
+        await fetchProfile();
         toast.success(`CV converted to ${targetFormat.toUpperCase()}!`);
       }
     } catch (error) {
@@ -274,7 +265,6 @@ const ProfilePage = () => {
     try {
         await downloadCV();
     } catch (error) {
-        // Display error to user
         alert('Failed to download CV. Please try again.');
     }
   };    
@@ -287,7 +277,6 @@ const ProfilePage = () => {
     }));
   };
 
-  // Render helpers
   const renderAvatarSection = () => (
     <div className="avatar-container">
       <img
@@ -420,7 +409,6 @@ const ProfilePage = () => {
       );
     }
   
-    // Sort jobs based on selected option
     const sortedJobs = [...state.recommendedJobs].sort((a, b) => {
       if (state.sortOption === 'match') return b.similarity - a.similarity;
       if (state.sortOption === 'date') return new Date(b.createdAt) - new Date(a.createdAt);
@@ -438,7 +426,6 @@ const ProfilePage = () => {
   
     return (
       <div className="recommended-jobs-container">
-        {/* Sorting Controls */}
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="sort-filter-container position-relative">
             <Button 
@@ -473,7 +460,6 @@ const ProfilePage = () => {
           </Badge>
         </div>
   
-        {/* Jobs List */}
         {sortedJobs.map((job) => (
           <Card key={job.id} className="recommended-job-card mb-3">
             <Card.Body>
@@ -496,7 +482,6 @@ const ProfilePage = () => {
                 </div>
               </div>
   
-              {/* Job Metadata Row */}
               <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
                 {job.location && (
                   <div className="d-flex align-items-center">
@@ -524,7 +509,6 @@ const ProfilePage = () => {
                 )}
               </div>
   
-              {/* Match Breakdown Visualization */}
               <div className="match-breakdown mb-3">
                 <div className="d-flex justify-content-between mb-1">
                   <small>Skill Match</small>
@@ -562,7 +546,6 @@ const ProfilePage = () => {
                 />
               </div>
   
-              {/* Matching Skills */}
               {job.matchDetails?.matchedSkills && job.matchDetails.matchedSkills.length > 0 && (
                 <div className="matching-skills mb-3">
                   <small className="text-muted d-block mb-1">
@@ -609,7 +592,6 @@ const ProfilePage = () => {
         </div>
       ) : state.user ? (
         <Row>
-          {/* Left Column: Profile Section */}
           <Col md={6}>
             <Card>
               <Card.Body>
@@ -760,7 +742,6 @@ const ProfilePage = () => {
             </Card>
           </Col>
 
-          {/* Right Column: Recommended Jobs */}
           <Col md={6} lg={5} className="recommended-jobs-column">
             <Card className="sticky-top">
               <Card.Body>
