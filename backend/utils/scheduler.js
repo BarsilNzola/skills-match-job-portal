@@ -3,7 +3,7 @@ const axios = require('axios')
 
 // Configure the base URL for local or production
 const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://talentpath-icve.onrender.com'  // <-- put your deployed site URL here
+  ? 'https://talentpath-fkal.onrender.com'  // <-- put your deployed site URL here
   : 'http://localhost:10000'
 
 // Schedule a job to run every 10 minutes
