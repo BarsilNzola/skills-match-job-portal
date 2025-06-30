@@ -3,11 +3,11 @@ const sequelize = require('../config/db')
 
 const Job = sequelize.define('Job', {
     title: {
-        type: DataTypes.STRING(150),
+        type: DataTypes.STRING(255),
         allowNull: false,
     },
     company: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING(150),
         allowNull: false,
     },
     description: {

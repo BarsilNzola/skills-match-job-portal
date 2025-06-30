@@ -96,8 +96,9 @@
     border-bottom: none;
 }
 
-.modal-body {
-    color: #333; /* Ensure modal text is visible */
+.modal-body .job-description,
+.modal-body .text-white-50 {
+  color: #212529 !important; /* Slightly darker for modal */
 }
 
 /* Alerts */
