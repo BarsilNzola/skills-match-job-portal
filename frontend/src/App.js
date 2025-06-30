@@ -25,10 +25,20 @@ const App = () => {
 
 const AppContent = () => {
   const { user, logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+    document.body.style.overflow = sidebarOpen ? 'auto' : 'hidden';
+  };
+  
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+    document.body.style.overflow = 'auto';
+  };
   
   return (
     <div className="app-container">
-
       <Helmet>
         <title>TalentPath</title>
         <link rel="icon" href="/favicon.ico" />
@@ -37,42 +47,51 @@ const AppContent = () => {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </Helmet>
 
-      {/* Navigation */}
-      <nav className="navbar navbar-expand-lg navbar-dark" style={{ background: 'linear-gradient(to right, rgba(15, 32, 39, 0.95), rgba(44, 83, 100, 0.95)' }}>
-      <div className="container-fluid">
-        <Link className="navbar-brand" to="/">TalentPath</Link>
-        <button 
-          className="navbar-toggler" 
-          type="button" 
-          data-bs-toggle="collapse" 
-          data-bs-target="#navbarContent"
-          aria-controls="navbarContent" 
-          aria-expanded="false" 
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-        <div className="collapse navbar-collapse justify-content-end" id="navbarContent">
+      {/* Navigation - Updated with new color scheme */}
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dominant">
+        <div className="container-fluid">
+          <Link className="navbar-brand" to="/" onClick={closeSidebar}>TalentPath</Link>
+          <button 
+            className="navbar-toggler" 
+            type="button" 
+            onClick={toggleSidebar}
+            aria-expanded={sidebarOpen}
+            aria-label="Toggle navigation"
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          
+          {/* Overlay */}
+          <div 
+            className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`} 
+            onClick={closeSidebar}
+          />
+          
+          {/* Sidebar */}
+          <div className={`collapse navbar-collapse ${sidebarOpen ? 'show' : ''}`} id="navbarContent">
+            <button className="sidebar-close" onClick={closeSidebar} aria-label="Close menu">
+              &times;
+            </button>
             <ul className="navbar-nav">
               <li className="nav-item">
-                <Link className="nav-link" to="/jobs">Jobs</Link>
+                <Link className="nav-link" to="/jobs" onClick={closeSidebar}>Jobs</Link>
               </li>
               {user ? (
                 <>
                   <li className="nav-item">
-                    <Link className="nav-link" to="/profile">Profile</Link>
+                    <Link className="nav-link" to="/profile" onClick={closeSidebar}>Profile</Link>
                   </li>
                   <li className="nav-item">
-                    <button className="btn btn-link nav-link" onClick={logout}>Logout</button>
+                    <button className="btn btn-link nav-link" onClick={() => { logout(); closeSidebar(); }}>Logout</button>
                   </li>
                 </>
               ) : (
                 <>
                   <li className="nav-item">
-                    <Link className="nav-link" to="/login">Login</Link>
+                    <Link className="nav-link" to="/login" onClick={closeSidebar}>Login</Link>
                   </li>
                   <li className="nav-item">
-                    <Link className="nav-link" to="/register">Register</Link>
+                    <Link className="nav-link" to="/register" onClick={closeSidebar}>Register</Link>
                   </li>
                 </>
               )}
@@ -82,7 +101,7 @@ const AppContent = () => {
       </nav>
 
       {/* Routes */}
-      <div> {/* Remove `mt-4` here */}
+      <div className="app-main-content">
         <Routes>
           <Route path="/" exact element={<Home />} />
           <Route path="/jobs" element={<JobPage />} />
