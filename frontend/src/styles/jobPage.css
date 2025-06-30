@@ -6,11 +6,22 @@
 
 .job-card {
     background: white !important;
-    color: #333; /* Dark text for readability */
+    color: #333; /* Ensures all text in card is dark by default */
     border: 1px solid #e0e0e0 !important;
     border-radius: 8px !important;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Fix for job description text */
+.job-card .job-preview {
+    color: #495057 !important; /* Dark gray for readability */
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.job-card .text-white-50 {
+    color: #495057 !important; /* Override the white-50 class for job cards */
 }
 
 .job-card:hover {
@@ -19,18 +30,17 @@
     border-color: #03B5AA !important;
 }
 
+/* Company name */
 .text-info {
     color: #03B5AA !important;
 }
 
+/* Muted text (locations, dates) */
 .text-muted {
     color: #6c757d !important;
 }
 
-.text-white-50 {
-    color: rgba(0, 0, 0, 0.7) !important;
-}
-
+/* Badges */
 .source-badge {
     background-color: #023436 !important;
     color: white !important;
@@ -39,13 +49,22 @@
 .url-badge {
     background-color: #FF8552 !important;
     color: white !important;
+    transition: all 0.2s ease;
 }
 
+.url-badge:hover {
+    background-color: #e67442 !important;
+    transform: translateY(-1px);
+}
+
+/* Description container */
 .job-description-container {
     border-left: 2px solid #03B5AA;
     padding-left: 12px;
+    margin: 12px 0;
 }
 
+/* Buttons */
 .view-details-btn {
     border-color: #03B5AA;
     color: #03B5AA;
@@ -64,17 +83,24 @@
     background-color: rgba(220, 53, 69, 0.1);
 }
 
+/* Search input */
 .search-input .form-control:focus {
     border-color: #03B5AA;
     box-shadow: 0 0 0 0.2rem rgba(3, 181, 170, 0.25);
 }
 
+/* Modal */
 .modal-header {
     background-color: #023436;
     color: white;
     border-bottom: none;
 }
 
+.modal-body {
+    color: #333; /* Ensure modal text is visible */
+}
+
+/* Alerts */
 .alert-danger {
     background-color: rgba(220, 53, 69, 0.1);
     border-color: rgba(220, 53, 69, 0.2);
@@ -87,6 +113,7 @@
     color: #03B5AA;
 }
 
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .jobs-container {
         padding: 1.5rem;
@@ -100,5 +127,9 @@
     
     .search-input .form-control {
         padding-left: 2.2rem;
+    }
+    
+    .job-card {
+        border-radius: 8px;
     }
 }
