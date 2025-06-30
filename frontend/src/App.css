@@ -21,6 +21,10 @@
   background-color: var(--dominant-color) !important;
 }
 
+.sidebar-close {
+  display: none; /* Hide by default */
+}
+
 .navbar {
   padding: 1rem 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -121,6 +125,7 @@
   
   /* Close button for sidebar */
   .sidebar-close {
+    display: block;
     position: absolute;
     top: 1rem;
     right: 1rem;

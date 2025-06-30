@@ -6,6 +6,7 @@
 
 .job-card {
     background: white !important;
+    color: #333; /* Dark text for readability */
     border: 1px solid #e0e0e0 !important;
     border-radius: 8px !important;
     transition: all 0.3s ease;
