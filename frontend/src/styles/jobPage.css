@@ -1,55 +1,82 @@
+/* Updated Color Scheme Variables */
+:root {
+    --dominant: #023436;       /* Midnight green */
+    --secondary: #03B5AA;      /* Pine green */
+    --accent: #FF8552;         /* Coral */
+    --light-text: #ffffff;
+    --dark-text: #333333;
+    --background: #f5f8fa;     /* Light uniform background */
+    --card-bg: #ffffff;        /* White for cards */
+    --border-color: rgba(0, 0, 0, 0.1);
+}
+
 .jobs-container {
-    background: #f8f9fa;
+    background: var(--background);
     min-height: 100vh;
     padding: 2rem;
 }
 
+.jobs-container h1 {
+    color: var(--dominant);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
 .job-card {
-    background: white !important;
-    color: #333; /* Ensures all text in card is dark by default */
-    border: 1px solid #e0e0e0 !important;
+    background: var(--card-bg) !important;
+    color: var(--dark-text);
+    border: 1px solid var(--border-color) !important;
     border-radius: 8px !important;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-/* Fix for job description text */
-.job-card .job-preview {
-    color: #495057 !important; /* Dark gray for readability */
-    font-size: 0.85rem;
-    line-height: 1.5;
-}
-
-.job-card .text-white-50 {
-    color: #495057 !important; /* Override the white-50 class for job cards */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .job-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    border-color: #03B5AA !important;
+    border-color: var(--secondary) !important;
 }
 
-/* Company name */
+/* Text styles */
 .text-info {
-    color: #03B5AA !important;
+    color: var(--secondary) !important;
 }
 
-/* Muted text (locations, dates) */
 .text-muted {
-    color: #6c757d !important;
+    color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Job description */
+.job-description-container {
+    border-left: 2px solid var(--secondary);
+    padding-left: 12px;
+    margin: 12px 0;
+    flex-grow: 1;
+}
+
+.job-card .job-preview,
+.job-card .text-white-50 {
+    color: var(--dark-text) !important;
+    font-size: 0.85rem;
+    line-height: 1.5;
 }
 
 /* Badges */
 .source-badge {
-    background-color: #023436 !important;
+    background-color: var(--dominant) !important;
     color: white !important;
+    font-weight: 500;
 }
 
 .url-badge {
-    background-color: #FF8552 !important;
+    background-color: var(--accent) !important;
     color: white !important;
     transition: all 0.2s ease;
+    font-weight: 500;
 }
 
 .url-badge:hover {
@@ -57,17 +84,11 @@
     transform: translateY(-1px);
 }
 
-/* Description container */
-.job-description-container {
-    border-left: 2px solid #03B5AA;
-    padding-left: 12px;
-    margin: 12px 0;
-}
-
 /* Buttons */
 .view-details-btn {
-    border-color: #03B5AA;
-    color: #03B5AA;
+    border-color: var(--secondary);
+    color: var(--secondary);
+    font-weight: 500;
 }
 
 .view-details-btn:hover {
@@ -77,6 +98,7 @@
 .delete-btn {
     border-color: #dc3545;
     color: #dc3545;
+    font-weight: 500;
 }
 
 .delete-btn:hover {
@@ -84,24 +106,60 @@
 }
 
 /* Search input */
+.search-input {
+    position: relative;
+}
+
+.search-input .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--secondary);
+    z-index: 10;
+}
+
+.search-input .form-control {
+    padding-left: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
 .search-input .form-control:focus {
-    border-color: #03B5AA;
+    border-color: var(--secondary);
     box-shadow: 0 0 0 0.2rem rgba(3, 181, 170, 0.25);
 }
 
 /* Modal */
 .modal-header {
-    background-color: #023436;
+    background-color: var(--dominant);
     color: white;
     border-bottom: none;
 }
 
-.modal-body .job-description,
-.modal-body .text-white-50 {
-  color: #212529 !important; /* Slightly darker for modal */
+.modal-title {
+    font-weight: 600;
+}
+
+.modal-body {
+    color: var(--dark-text);
+}
+
+.modal-body .job-description {
+    color: var(--dark-text) !important;
+    line-height: 1.6;
+}
+
+.modal-footer {
+    border-top-color: var(--border-color);
 }
 
 /* Alerts */
+.alert {
+    border-radius: 8px;
+    border-width: 1px;
+}
+
 .alert-danger {
     background-color: rgba(220, 53, 69, 0.1);
     border-color: rgba(220, 53, 69, 0.2);
@@ -111,7 +169,7 @@
 .alert-info {
     background-color: rgba(3, 181, 170, 0.1);
     border-color: rgba(3, 181, 170, 0.2);
-    color: #03B5AA;
+    color: var(--secondary);
 }
 
 /* Responsive adjustments */

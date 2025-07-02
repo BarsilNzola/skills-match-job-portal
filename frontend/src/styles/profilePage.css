@@ -1,16 +1,18 @@
-/* Color Scheme Variables */
+/* Updated Color Scheme Variables */
 :root {
-    --dominant-color: #023436;
-    --secondary-color: #03B5AA;
-    --accent-color: #FF8552;
+    --dominant: #023436;       /* Midnight green */
+    --secondary: #03B5AA;      /* Pine green */
+    --accent: #FF8552;         /* Coral */
     --light-text: #ffffff;
-    --text-color: #333333;
+    --dark-text: #333333;
+    --background: #f5f8fa;     /* Light uniform background */
+    --card-bg: #ffffff;        /* White for cards */
 }
-  
+
 /* Base Styles */
 .profile-container {
-    background: linear-gradient(to right, var(--dominant-color), rgba(44, 83, 100, 0.95));
-    color: var(--light-text);
+    background-color: var(--background);
+    color: var(--dark-text);
     font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     padding: 1.25rem;
     min-height: 100vh;
@@ -20,16 +22,25 @@
     flex-direction: column;
     align-items: center;
 }
-  
+
 /* Text Elements */
 .profile-container label,
 .profile-container .form-label,
 .profile-container p,
 .profile-container .card-title,
 .profile-container .card-text {
-    color: var(--light-text) !important;
+    color: var(--dark-text) !important;
 }
-  
+
+/* Header */
+.profile-container h1 {
+    color: var(--dominant);
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
 /* Layout Structure */
 .profile-container .row {
     display: flex;
@@ -38,29 +49,29 @@
     justify-content: center;
     width: 100%;
 }
-  
+
 .profile-container .col-md-6 {
     flex: 1 1 100%;
     max-width: 100%;
 }
-  
+
 /* Card Styles */
 .profile-container .card {
     padding: 1.25rem;
     border-radius: 0.9375rem;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--card-bg);
     border: none;
     color: inherit;
-    box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-  
+
 .profile-container .card-body {
     display: flex;
     flex-direction: column;
     gap: 0.9375rem;
 }
-  
+
 /* Profile Header */
 .profile-header {
     display: flex;
@@ -69,32 +80,33 @@
     gap: 1.25rem;
     margin-bottom: 1.5rem;
     padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(3, 181, 170, 0.05);
     border-radius: 0.625rem;
+    border: 1px solid rgba(3, 181, 170, 0.1);
 }
-  
+
 /* Avatar Styles */
 .avatar-container {
     width: 7.5rem;
     height: 7.5rem;
     min-width: 7.5rem;
     min-height: 7.5rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(3, 181, 170, 0.1);
     border-radius: 50%;
     overflow: visible;
     position: relative;
 }
-  
+
 .avatar-image {
     width: 100%;
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    border: 0.1875rem solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    border: 0.1875rem solid var(--secondary);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
     background-color: #f0f2f5;
 }
-  
+
 .avatar-edit-button {
     position: absolute;
     bottom: 5px;
@@ -102,155 +114,184 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background-color: var(--accent-color);
+    background-color: var(--accent);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     border: 2px solid #fff;
     z-index: 10;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
 }
-  
+
 .avatar-edit-button:hover {
     background-color: #e67442;
     transform: scale(1.1);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
 }
-  
+
 /* Profile Text */
 .profile-text {
     flex: 1;
     text-align: center;
 }
-  
+
 .profile-text h2 {
     margin: 0;
     font-size: clamp(1.25rem, 4vw, 1.75rem);
     font-weight: 600;
-    color: var(--light-text);
+    color: var(--dominant);
     line-height: 1.3;
 }
-  
+
+.profile-text .email {
+    color: var(--secondary);
+    font-size: 0.9rem;
+}
+
 /* Skills Chips */
 .skills-chip {
     display: inline-block;
-    background-color: var(--secondary-color);
+    background-color: var(--secondary);
     color: white;
     border-radius: 3.125rem;
     padding: 0.3125rem 0.625rem;
     margin: 0.1875rem;
     font-size: 0.9rem;
 }
-  
+
 /* Button Styles */
 .profile-container .btn {
-    background-color: var(--secondary-color);
     border-radius: 0.3125rem;
     color: white;
     padding: 0.625rem 1.25rem;
     transition: all 0.2s ease;
+    border: none;
+    font-weight: 500;
 }
-  
-.profile-container .btn:hover {
+
+.profile-container .btn-primary {
+    background-color: var(--accent);
+}
+
+.profile-container .btn-primary:hover {
+    background-color: #e67442;
+    transform: translateY(-0.0625rem);
+}
+
+.profile-container .btn-secondary {
+    background-color: var(--secondary);
+}
+
+.profile-container .btn-secondary:hover {
     background-color: #029c92;
     transform: translateY(-0.0625rem);
 }
-  
-.btn-outline-primary {
-    border-color: var(--secondary-color);
-    color: var(--secondary-color);
+
+.profile-container .btn-success {
+    background-color: #28a745;
 }
-  
-.btn-outline-primary:hover {
-    background-color: var(--secondary-color);
-    border-color: var(--secondary-color);
+
+.profile-container .btn-info {
+    background-color: #17a2b8;
+}
+
+.btn-outline-secondary {
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--secondary);
+    border-color: var(--secondary);
     color: white;
 }
-  
+
 /* Progress Bars */
 .progress {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(3, 181, 170, 0.1);
     height: 8px;
     border-radius: 4px;
 }
-  
+
 .progress-bar {
     transition: width 0.6s ease;
 }
-  
+
 /* Recommended Jobs Section */
 .recommended-jobs-column {
     position: sticky;
     top: 20px;
 }
-  
+
 .recommended-jobs-container {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
-  
+
 .recommended-job-card {
-    background-color: rgba(30, 42, 50, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 10px;
     transition: all 0.3s ease;
 }
-  
+
 .recommended-job-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-color: rgba(3, 181, 170, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--secondary);
 }
-  
+
 .match-badge {
     font-size: 0.75rem;
     padding: 0.35em 0.65em;
     border-radius: 4px;
-    background-color: var(--secondary-color) !important;
+    background-color: var(--secondary) !important;
+    color: white !important;
 }
-  
+
 .source-badge {
     font-size: 0.7rem;
     padding: 0.25em 0.5em;
-    background-color: rgba(108, 117, 125, 0.3) !important;
-    color: rgba(255, 255, 255, 0.9) !important;
+    background-color: rgba(108, 117, 125, 0.1) !important;
+    color: var(--dark-text) !important;
     text-transform: capitalize;
     border-radius: 4px;
 }
-  
+
 /* Match Breakdown */
 .match-breakdown {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(3, 181, 170, 0.05);
     padding: 12px;
     border-radius: 8px;
     margin-top: 12px;
+    border: 1px solid rgba(3, 181, 170, 0.1);
 }
-  
+
 .match-breakdown small {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--dark-text);
 }
-  
+
 /* Skill Badges */
 .skill-badge {
     font-weight: 500;
     padding: 4px 8px;
     font-size: 0.75rem;
     border-radius: 4px;
-    background-color: rgba(3, 181, 170, 0.2) !important;
-    border: 1px solid rgba(3, 181, 170, 0.3);
-    color: white !important;
+    background-color: rgba(3, 181, 170, 0.1) !important;
+    border: 1px solid rgba(3, 181, 170, 0.2);
+    color: var(--dark-text) !important;
 }
-  
+
 /* Sorting Dropdown */
 .sort-filter-container {
     display: inline-block;
     position: relative;
 }
-  
+
 .sort-dropdown {
     position: absolute;
     top: 100%;
@@ -260,101 +301,103 @@
     padding: 5px 0;
     margin: 2px 0 0;
     font-size: 14px;
-    background-color: var(--dominant-color);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 4px;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
-  
+
 .dropdown-item {
     display: block;
     padding: 8px 20px;
     clear: both;
-    color: #ecf0f1;
+    color: var(--dark-text);
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s;
 }
-  
+
 .dropdown-item:hover {
-    background-color: rgba(3, 181, 170, 0.3);
-    color: #fff;
+    background-color: rgba(3, 181, 170, 0.1);
+    color: var(--dark-text);
 }
-  
+
 .dropdown-item.active {
-    background-color: var(--secondary-color);
+    background-color: var(--secondary);
     color: white;
 }
-  
-/* Job Metadata Row */
-.job-metadata-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+
+/* Badges */
+.badge.bg-secondary {
+    background-color: var(--secondary) !important;
 }
-  
-.job-metadata-row .text-muted {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.6) !important;
+
+/* Form Elements */
+.form-control {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: rgba(255, 255, 255, 0.8);
 }
-  
-.job-metadata-row a {
-    font-size: 0.8rem;
-    text-decoration: none;
-    transition: all 0.2s;
-    color: var(--secondary-color) !important;
+
+.form-control:focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 0.25rem rgba(3, 181, 170, 0.25);
 }
-  
-.job-metadata-row a:hover {
-    text-decoration: underline;
+
+/* Alert Styles */
+.alert {
+    border-radius: 8px;
 }
-  
+
+.alert-info {
+    background-color: rgba(3, 181, 170, 0.1);
+    border-color: rgba(3, 181, 170, 0.2);
+    color: var(--dark-text);
+}
+
 /* Project Cards */
 .project-card {
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
+    background: rgba(3, 181, 170, 0.05);
+    border: 1px solid rgba(3, 181, 170, 0.1) !important;
     border-radius: 0.625rem;
     transition: all 0.2s ease;
 }
-  
+
 /* Text Styles */
 .text-muted {
-    color: rgba(255, 255, 255, 0.6) !important;
+    color: rgba(0, 0, 0, 0.6) !important;
 }
-  
+
 /* Responsive Breakpoints */
 @media (min-width: 768px) {
     .profile-container .col-md-6 {
         flex: 1 1 calc(50% - 1.25rem);
         max-width: calc(50% - 1.25rem);
     }
-  
+
     .profile-header {
         flex-direction: row;
         text-align: left;
     }
-  
+
     .profile-text {
         text-align: left;
     }
 }
-  
+
 @media (max-width: 576px) {
     .profile-container {
         padding: 0.9375rem;
     }
-  
+
     .profile-container .card {
         padding: 0.9375rem;
     }
-  
+
     .avatar-container {
         width: 6.25rem;
         height: 6.25rem;
     }
-  
+
     .sort-dropdown {
         right: 0;
         left: auto;
