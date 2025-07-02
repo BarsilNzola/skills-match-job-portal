@@ -16,6 +16,16 @@ const User = sequelize.define('User', {
             isEmail: true, // Ensures the email format is valid
         },
     },
+    isVerified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    verificationToken: {
+        type: DataTypes.STRING,
+    },
+    verificationTokenExpires: {
+        type: DataTypes.DATE,
+    },
     profileImage: {
         type: DataTypes.STRING, // stores filename/path
         allowNull: true,
