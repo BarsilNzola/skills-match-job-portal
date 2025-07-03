@@ -124,7 +124,7 @@ router.post('/register', async (req, res) => {
 });
 
 // verification route
-router.get('/verify-email', async (req, res) => {
+router.get('/api/verify-email', async (req, res) => {
     try {
         // Security headers
         res.setHeader('X-Frame-Options', 'DENY');

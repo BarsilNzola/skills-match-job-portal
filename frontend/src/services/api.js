@@ -49,7 +49,7 @@ export const registerUser = async (userData) => {
 
 export const verifyEmail = async (token) => {
     try {
-        const response = await api.get(`/users/verify-email?token=${token}`);
+        const response = await api.get(`/api/users/verify-email?token=${token}`);
         return response.data;
     } catch (error) {
         throw error.response?.data || { error: 'Verification failed. Please try again.' };
