@@ -126,38 +126,74 @@ router.post('/register', async (req, res) => {
 // verification route
 router.get('/verify-email', async (req, res) => {
     try {
-        const { token, email } = req.query;
+        // Security headers
+        res.setHeader('X-Frame-Options', 'DENY');
         
-        if (!token || !email) {
+        const { token, email } = req.query;
+        console.log('Raw verification request:', { token, email });
+        
+        if (!token?.trim() || !email?.trim()) {
+            console.log('Missing parameters');
             return res.redirect('/login?error=missing_parameters');
         }
 
-        // 1. Find the user
+        const decodedEmail = decodeURIComponent(email).trim();
+        const cleanToken = token.trim();
+        
+        console.log('Searching for user:', decodedEmail);
+        console.log('Verification token:', cleanToken);
+        console.log('Current time:', new Date());
+
+        // 1. Find the user with matching token and unexpired time
         const user = await User.findOne({ 
             where: { 
-                email: decodeURIComponent(email),
-                verificationToken: token,
-                verificationTokenExpires: { [Op.gt]: Date.now() }
+                email: decodedEmail,
+                verificationToken: cleanToken
             }
         });
 
         if (!user) {
+            console.log('User not found or token mismatch');
+            return res.redirect('/login?error=invalid_token');
+        }
+
+        console.log('Found user:', {
+            id: user.id,
+            currentToken: user.verificationToken,
+            expiresAt: user.verificationTokenExpires,
+            isVerified: user.isVerified
+        });
+
+        // Check token expiration
+        if (new Date(user.verificationTokenExpires) < new Date()) {
+            console.log('Token expired');
             return res.redirect('/login?error=invalid_token');
         }
 
         // 2. Update verification status
-        await user.update({
+        const updateResult = await user.update({
             isVerified: true,
             verificationToken: null,
             verificationTokenExpires: null
         });
 
+        console.log('Update result:', {
+            isVerified: updateResult.isVerified,
+            verificationToken: updateResult.verificationToken,
+            verificationTokenExpires: updateResult.verificationTokenExpires
+        });
+
         // 3. Successful redirect
-        res.redirect('/login?verified=1');
+        console.log('Verification successful, redirecting...');
+        return res.redirect('/login?verified=1');
         
     } catch (error) {
-        console.error('Verification error:', error);
-        res.redirect('/login?error=verification_failed');
+        console.error('Verification failed:', {
+            message: error.message,
+            stack: error.stack,
+            query: req.query
+        });
+        return res.redirect('/login?error=verification_failed');
     }
 });
 
