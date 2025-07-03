@@ -123,59 +123,84 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Add verification route
+// verification route
 router.get('/verify-email', async (req, res) => {
     try {
-        const { token } = req.query;
+        const { token, email } = req.query;
+        
+        if (!token || !email) {
+            return res.redirect('/login?error=Missing+verification+parameters');
+        }
 
+        const decodedEmail = decodeURIComponent(email);
         const user = await User.findOne({ 
             where: { 
+                email: decodedEmail,
                 verificationToken: token,
                 verificationTokenExpires: { [Op.gt]: Date.now() }
             }
         });
 
         if (!user) {
-            return res.status(400).json({ error: 'Invalid or expired token.' });
+            return res.redirect('/login?error=Invalid+or+expired+verification+token');
         }
 
-        user.isVerified = true;
-        user.verificationToken = null;
-        user.verificationTokenExpires = null;
-        await user.save();
+        // Update user and save in one operation
+        await user.update({
+            isVerified: true,
+            verificationToken: null,
+            verificationTokenExpires: null
+        });
 
-        res.status(200).json({ message: 'Email verified successfully!' });
+        // Successful redirect with email and success flag
+        res.redirect(`/login?verified=1&email=${encodeURIComponent(user.email)}`);
+        
     } catch (error) {
-        console.error('Error during verification:', error);
-        res.status(500).json({ error: 'Internal server error.' });
+        console.error('Verification error:', error);
+        res.redirect('/login?error=Verification+failed');
     }
 });
 
-// Add resend verification route
+// resend verification route
 router.post('/resend-verification', async (req, res) => {
     try {
         const { email } = req.body;
         
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+
         const user = await User.findOne({ where: { email } });
         if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
+            return res.status(404).json({ error: 'User not found' });
         }
 
         if (user.isVerified) {
-            return res.status(400).json({ error: 'Email is already verified.' });
+            return res.status(400).json({ 
+                error: 'Email already verified',
+                redirect: '/login' 
+            });
         }
 
         const verificationToken = crypto.randomBytes(20).toString('hex');
-        user.verificationToken = verificationToken;
-        user.verificationTokenExpires = Date.now() + 3600000;
-        await user.save();
+        await user.update({
+            verificationToken,
+            verificationTokenExpires: Date.now() + 3600000 // 1 hour
+        });
 
         await sendVerificationEmail(user.email, verificationToken);
 
-        res.status(200).json({ message: 'Verification email resent successfully!' });
+        res.status(200).json({ 
+            message: 'Verification email resent',
+            email: user.email 
+        });
+        
     } catch (error) {
-        console.error('Error resending verification:', error);
-        res.status(500).json({ error: 'Internal server error.' });
+        console.error('Resend error:', error);
+        res.status(500).json({ 
+            error: 'Failed to resend verification',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -184,36 +209,69 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required.' });
+        // Validate input
+        const errors = [];
+        if (!email) errors.push('Email is required');
+        if (!password) errors.push('Password is required');
+        if (errors.length > 0) {
+            return res.status(400).json({ errors });
         }
 
         const user = await User.findOne({ where: { email } });
         if (!user) {
-            return res.status(400).json({ error: 'Invalid login credentials.' });
+            return res.status(401).json({ 
+                error: 'Invalid credentials',
+                hint: 'Please check your email and password' 
+            });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ error: 'Invalid login credentials.' });
+            return res.status(401).json({ 
+                error: 'Invalid credentials',
+                hint: 'Please check your password' 
+            });
         }
 
         if (!user.isVerified) {
-            return res.status(403).json({ 
-                error: 'Please verify your email first. Check your inbox or <a href="/resend-verification">resend verification email</a>.' 
+            return res.status(403).json({
+                error: 'Email not verified',
+                action: {
+                    label: 'Resend verification email',
+                    endpoint: '/resend-verification',
+                    method: 'POST'
+                },
+                email: user.email // For frontend to use in resend
             });
         }
 
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                isVerified: true // Include verification status in token
+            },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
 
-        res.status(200).json({ message: 'Login successful.', token });
+        res.json({
+            message: 'Login successful',
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name
+            }
+        });
+
     } catch (error) {
-        console.error('Error during login:', error);
-        res.status(500).json({ error: 'Internal server error.' });
+        console.error('Login error:', error);
+        res.status(500).json({ 
+            error: 'Login failed',
+            ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        });
     }
 });
 

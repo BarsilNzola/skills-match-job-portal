@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { loginUser } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaEnvelope, FaLock, FaSignInAlt, FaUserPlus, FaChartLine, FaBriefcase } from 'react-icons/fa';
+import { 
+  FaEnvelope, FaLock, FaSignInAlt, FaUserPlus, 
+  FaChartLine, FaBriefcase, FaCheckCircle 
+} from 'react-icons/fa';
 import '../styles/loginForm.css';
 
 const LoginForm = () => {
@@ -12,8 +16,22 @@ const LoginForm = () => {
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [searchParams] = useSearchParams();
+    const [verifiedEmail, setVerifiedEmail] = useState(null);
     const navigate = useNavigate();
     const { login } = useAuth();
+
+    // Check for verification success on component mount
+    useEffect(() => {
+        const verifiedParam = searchParams.get('verified');
+        const emailParam = searchParams.get('email');
+        
+        if (verifiedParam === '1' && emailParam) {
+            setVerifiedEmail(decodeURIComponent(emailParam));
+            // Clean the URL
+            navigate('/login', { replace: true });
+        }
+    }, [searchParams, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -72,6 +90,20 @@ const LoginForm = () => {
                 <div className="form-column">
                     <div className="login-card">
                         <h2 className="text-center mb-4">Sign In</h2>
+                        
+                        {/* Verification Success Message */}
+                        {verifiedEmail && (
+                            <div className="alert alert-success mb-4">
+                                <div className="d-flex align-items-center">
+                                    <FaCheckCircle className="me-2" />
+                                    <span>
+                                        Email <strong>{verifiedEmail}</strong> verified successfully!
+                                        You can now log in.
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                        
                         <form onSubmit={handleSubmit}>
                             {error && <div className="alert alert-danger">{error}</div>}
                             
