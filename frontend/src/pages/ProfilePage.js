@@ -63,7 +63,7 @@ const ProfilePage = () => {
   
       let profileImage = response.profileImage;
       if (!profileImage) {
-        profileImage = await getAvatarUrl(response.data.id);
+        profileImage = await getAvatarUrl(response.id);
       }
   
       setState(prev => ({
