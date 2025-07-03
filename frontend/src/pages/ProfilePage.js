@@ -61,7 +61,7 @@ const ProfilePage = () => {
       setState(prev => ({ ...prev, loading: { ...prev.loading, profile: true } }));
       const response = await fetchUserProfile();
   
-      let profileImage = response.data.profileImage;
+      let profileImage = response.profileImage;
       if (!profileImage) {
         profileImage = await getAvatarUrl(response.data.id);
       }
@@ -69,17 +69,17 @@ const ProfilePage = () => {
       setState(prev => ({
         ...prev,
         user: {
-          ...response.data,
-          skills: response.data.skills || [],
-          profile: response.data.profile || { education: '', experience: '', projects: [] },
+          ...response,
+          skills: response.skills || [],
+          profile: response.profile || { education: '', experience: '', projects: [] },
           profileImage: profileImage,
-          cvFile: response.data.cvFile || null,
-          cvFileType: response.data.cvFileType || null
+          cvFile: response.cvFile || null,
+          cvFileType: response.cvFileType || null
         },
-        skills: response.data.skills?.join(', ') || '',
-        education: response.data.profile?.education || '',
-        experience: response.data.profile?.experience || '',
-        projects: response.data.profile?.projects?.join('\n') || '',
+        skills: response.skills?.join(', ') || '',
+        education: response.profile?.education || '',
+        experience: response.profile?.experience || '',
+        projects: response.profile?.projects?.join('\n') || '',
         loading: { ...prev.loading, profile: false },
         error: null
       }));
