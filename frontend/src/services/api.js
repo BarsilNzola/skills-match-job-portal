@@ -12,9 +12,9 @@ const api = axios.create({
 
 // Interceptors for adding Authorization header
 api.interceptors.request.use(config => {
-    const token = sessionStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken'); // ✅ use localStorage
     if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
@@ -23,14 +23,14 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            sessionStorage.removeItem('authToken');
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem('authToken'); // ✅ clear from localStorage
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
     }
 );
-
+  
 // Helper function for consistent error handling
 const handleApiError = (error) => {
     const message = error.response?.data?.message || error.message || 'An unknown error occurred';
