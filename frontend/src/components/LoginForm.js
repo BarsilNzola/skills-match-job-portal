@@ -65,12 +65,24 @@ const LoginForm = () => {
             navigate('/profile');
         } catch (error) {
             const message = error.response?.data?.error || 'Login failed. Please try again.';
-            
+
             if (error.response?.data?.errors) {
                 error.response.data.errors.forEach(err => {
-                    if (err.path === 'email') setEmailError(err.msg);
-                    if (err.path === 'password') setPasswordError(err.msg);
+                if (err.path === 'email') setEmailError(err.msg);
+                if (err.path === 'password') setPasswordError(err.msg);
                 });
+            } else if (message === 'Email not verified') {
+                setError(
+                <>
+                    Your email is not verified.{' '}
+                    <button
+                    className="btn btn-link p-0"
+                    onClick={() => handleResendVerification(email)}
+                    >
+                    Resend verification email
+                    </button>
+                </>
+                );
             } else {
                 if (message.toLowerCase().includes('email')) setEmailError(message);
                 else if (message.toLowerCase().includes('password')) setPasswordError(message);
@@ -78,6 +90,15 @@ const LoginForm = () => {
             }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResendVerification = async (emailToResend) => {
+        try {
+          await resendVerificationEmail({ email: emailToResend });
+          setError('Verification email resent successfully!');
+        } catch (err) {
+          setError('Failed to resend verification email. Please try again.');
         }
     };
 

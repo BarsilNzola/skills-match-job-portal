@@ -67,26 +67,32 @@ const uploadCV = multer({
 
 // Validation function to check if the user input is correct
 const validateRegistration = (data) => {
+    const errors = [];
+  
     if (!data.email || !/^\S+@\S+\.\S+$/.test(data.email)) {
-        return 'Invalid email format';
+      errors.push({ path: 'email', msg: 'Invalid email format' });
     }
+  
     if (!data.password || data.password.length < 8) {
-        return 'Password must be at least 8 characters long';
+      errors.push({ path: 'password', msg: 'Password must be at least 8 characters long' });
     }
-    return null;
+  
+    return errors;
 };
 
 // Route: Register a new user
 router.post('/register', async (req, res) => {
     try {
-        const validationError = validateRegistration(req.body);
-        if (validationError) {
-            return res.status(400).json({ error: validationError });
+        const validationErrors = validateRegistration(req.body);
+        if (validationErrors.length > 0) {
+            return res.status(400).json({ errors: validationErrors });
         }
 
         const existingUser = await User.findOne({ where: { email: req.body.email } });
         if (existingUser) {
-            return res.status(400).json({ error: 'Email already registered.' });
+            return res.status(400).json({
+                errors: [{ path: 'email', msg: 'Email already registered.' }]
+            });
         }
 
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -247,25 +253,24 @@ router.post('/login', async (req, res) => {
 
         // Validate input
         const errors = [];
-        if (!email) errors.push('Email is required');
-        if (!password) errors.push('Password is required');
+        if (!email) errors.push({ path: 'email', msg: 'Email is required' });
+        if (!password) errors.push({ path: 'password', msg: 'Password is required' });
+
         if (errors.length > 0) {
-            return res.status(400).json({ errors });
+        return res.status(400).json({ errors });
         }
 
         const user = await User.findOne({ where: { email } });
         if (!user) {
-            return res.status(401).json({ 
-                error: 'Invalid credentials',
-                hint: 'Please check your email and password' 
+            return res.status(401).json({
+                errors: [{ path: 'email', msg: 'No account found with this email' }]
             });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(401).json({ 
-                error: 'Invalid credentials',
-                hint: 'Please check your password' 
+            return res.status(401).json({
+                errors: [{ path: 'email', msg: 'Incorrect Password' }]
             });
         }
 
