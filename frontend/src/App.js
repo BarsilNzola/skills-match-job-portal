@@ -26,6 +26,7 @@ const App = () => {
 
 const AppContent = () => {
   const { user, logout, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
     return (
@@ -34,8 +35,6 @@ const AppContent = () => {
       </div>
     );
   }
-  
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
