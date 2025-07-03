@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 
 // 2. Enhanced email headers and content
 const sendVerificationEmail = async (email, token, userName = 'User') => {
-  const verificationUrl = `${BASE_URL}/verify-email?token=${token}`;
+    const verificationUrl = `${BASE_URL}/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
   
   const mailOptions = {
     from: `"TalentPath" <${process.env.EMAIL_FROM || 'no-reply@talentpath.com'}>`,

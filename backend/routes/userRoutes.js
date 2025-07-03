@@ -129,35 +129,35 @@ router.get('/verify-email', async (req, res) => {
         const { token, email } = req.query;
         
         if (!token || !email) {
-            return res.redirect('/login?error=Missing+verification+parameters');
+            return res.redirect('/login?error=missing_parameters');
         }
 
-        const decodedEmail = decodeURIComponent(email);
+        // 1. Find the user
         const user = await User.findOne({ 
             where: { 
-                email: decodedEmail,
+                email: decodeURIComponent(email),
                 verificationToken: token,
                 verificationTokenExpires: { [Op.gt]: Date.now() }
             }
         });
 
         if (!user) {
-            return res.redirect('/login?error=Invalid+or+expired+verification+token');
+            return res.redirect('/login?error=invalid_token');
         }
 
-        // Update user and save in one operation
+        // 2. Update verification status
         await user.update({
             isVerified: true,
             verificationToken: null,
             verificationTokenExpires: null
         });
 
-        // Successful redirect with email and success flag
-        res.redirect(`/login?verified=1&email=${encodeURIComponent(user.email)}`);
+        // 3. Successful redirect
+        res.redirect('/login?verified=1');
         
     } catch (error) {
         console.error('Verification error:', error);
-        res.redirect('/login?error=Verification+failed');
+        res.redirect('/login?error=verification_failed');
     }
 });
 

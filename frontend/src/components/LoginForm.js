@@ -17,19 +17,36 @@ const LoginForm = () => {
     const [passwordError, setPasswordError] = useState('');
     const [loading, setLoading] = useState(false);
     const [searchParams] = useSearchParams();
-    const [verifiedEmail, setVerifiedEmail] = useState(null);
+    const [isVerified, setIsVerified] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
 
     useEffect(() => {
         const verifiedParam = searchParams.get('verified');
-        const emailParam = searchParams.get('email');
+        const errorParam = searchParams.get('error');
         
-        if (verifiedParam === '1' && emailParam) {
-            setVerifiedEmail(decodeURIComponent(emailParam));
+        if (verifiedParam === '1') {
+            setIsVerified(true);
             navigate('/login', { replace: true });
         }
+        
+        if (errorParam) {
+            setError(getErrorMessage(errorParam));
+        }
     }, [searchParams, navigate]);
+
+    const getErrorMessage = (errorCode) => {
+        switch(errorCode) {
+            case 'missing_parameters':
+                return 'Verification link was incomplete. Please request a new verification email.';
+            case 'invalid_token':
+                return 'Invalid or expired verification link. Please request a new verification email.';
+            case 'verification_failed':
+                return 'Verification failed. Please try again or contact support.';
+            default:
+                return 'An error occurred during verification.';
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -45,14 +62,12 @@ const LoginForm = () => {
         } catch (error) {
             const message = error.response?.data?.error || 'Login failed. Please try again.';
             
-            // Handle structured errors from API
             if (error.response?.data?.errors) {
                 error.response.data.errors.forEach(err => {
                     if (err.path === 'email') setEmailError(err.msg);
                     if (err.path === 'password') setPasswordError(err.msg);
                 });
             } else {
-                // Fallback to single error
                 if (message.toLowerCase().includes('email')) setEmailError(message);
                 else if (message.toLowerCase().includes('password')) setPasswordError(message);
                 else setError(message);
@@ -110,19 +125,16 @@ const LoginForm = () => {
                         <h2 className="text-center mb-4">Sign In</h2>
                         
                         {/* Verification Success Message */}
-                        {verifiedEmail && (
+                        {isVerified && (
                             <div className="alert alert-success mb-4">
                                 <div className="d-flex align-items-center">
                                     <FaCheckCircle className="me-2" />
-                                    <span>
-                                        Email <strong>{verifiedEmail}</strong> verified successfully!
-                                        You can now log in.
-                                    </span>
+                                    <span>Your email has been verified successfully! You can now log in.</span>
                                 </div>
                             </div>
                         )}
                         
-                        {/* Main Error Message */}
+                        {/* Error Messages */}
                         {error && (
                             <div className="alert alert-danger mb-4">
                                 <div className="d-flex align-items-center">
