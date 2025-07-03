@@ -1,50 +1,43 @@
-// auth.js
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import jwtDecode from 'jwt-decode';
+const jwt = require('jsonwebtoken');
+const User = require('../models/User'); // Ensure the User model is correctly implemented
 
-const AuthContext = createContext();
+const authMiddleware = async (req, res, next) => {
+    const token = req.header('Authorization')?.replace('Bearer ', ''); // Get token from Authorization header
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+    if (!token) {
+        console.log("No token provided");
+        return res.status(401).json({ message: 'No token provided. Please log in.' });
+    }
 
-  // Called after successful login
-  const login = (token) => {
-    sessionStorage.setItem('authToken', token);
     try {
-      const decoded = jwtDecode(token);
-      setUser(decoded); // Set user info from token
-    } catch (err) {
-      console.error('Invalid token:', err);
-      sessionStorage.removeItem('authToken');
+        // Verify the token and extract user data
+        console.log("Token received:", token);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("Decoded token:", decoded);
+
+        const user = await User.findByPk(decoded.id); // Get user from the database
+
+        if (!user) {
+            console.log("User not found in database");
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        req.user = { id: user.id, email: user.email, role: user.role }; // Include role        
+        next(); // Continue to the next middleware or route
+    } catch (error) {
+        console.error("Error decoding token:", error); // Log error for debugging
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Token expired. Please log in again.' });
+        }
+        res.status(401).json({ message: 'Invalid token. Please log in again.' });
     }
-  };
-
-  // Called when user logs out
-  const logout = () => {
-    sessionStorage.removeItem('authToken');
-    setUser(null);
-  };
-
-  // Load user from token on page refresh
-  useEffect(() => {
-    const token = sessionStorage.getItem('authToken');
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        setUser(decoded);
-      } catch (err) {
-        console.error('Failed to decode token on load:', err);
-        sessionStorage.removeItem('authToken');
-      }
-    }
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
 };
 
-// Custom hook to use auth context
-export const useAuth = () => useContext(AuthContext);
+const adminMiddleware = (req, res, next) => {
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied. Admins only.' });
+    }
+    next();
+};
+
+module.exports = { authMiddleware, adminMiddleware };

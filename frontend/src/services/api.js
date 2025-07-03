@@ -67,11 +67,11 @@ export const resendVerificationEmail = async (email) => {
 
 export const loginUser = async (userData) => {
     try {
-        const response = await api.post('/users/login', userData);
-        sessionStorage.setItem('authToken', response.data.token);
-        return response.data;
+      const response = await api.post('/users/login', userData);
+      localStorage.setItem('authToken', response.data.token); // ✅ use localStorage
+      return response.data;
     } catch (error) {
-        throw error.response?.data || { error: 'Login failed. Please try again.' };
+      throw error.response?.data || { error: 'Login failed. Please try again.' };
     }
 };
 
