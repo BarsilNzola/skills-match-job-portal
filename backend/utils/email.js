@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 const BASE_URL = process.env.NODE_ENV === 'production'
