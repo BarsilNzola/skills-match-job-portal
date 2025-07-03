@@ -21,19 +21,19 @@ const transporter = nodemailer.createTransport({
 });
 
 // 2. Enhanced email headers and content
-const sendVerificationEmail = async (email, token, userName = 'User') => {
+const sendVerificationEmail = async (email, token, name = 'User') => {
     const verificationUrl = `${BASE_URL}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
   
   const mailOptions = {
     from: `"TalentPath" <${process.env.EMAIL_FROM || 'no-reply@talentpath.com'}>`,
     to: email,
     // 3. Better subject line
-    subject: `${userName}, verify your email for TalentPath`,
+    subject: `${name}, verify your email for TalentPath`,
     // 4. Improved HTML with text fallback
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #023436;">Welcome to TalentPath!</h2>
-        <p>Hi ${userName},</p>
+        <p>Hi ${name},</p>
         <p>Please verify your email address to complete your registration:</p>
         <a href="${verificationUrl}" 
            style="display: inline-block; padding: 10px 20px; background-color: #FF8552; 
@@ -47,7 +47,7 @@ const sendVerificationEmail = async (email, token, userName = 'User') => {
         </p>
       </div>
     `,
-    text: `Hi ${userName},\n\nPlease verify your email by visiting:\n${verificationUrl}\n\nThis link expires in 1 hour.`, // Plain text version
+    text: `Hi ${name},\n\nPlease verify your email by visiting:\n${verificationUrl}\n\nThis link expires in 1 hour.`, // Plain text version
     // 5. Critical anti-spam headers
     headers: {
       'X-Entity-Ref-ID': crypto.randomBytes(16).toString('hex'),

@@ -24,12 +24,16 @@ const LoginForm = () => {
     useEffect(() => {
         const verifiedParam = searchParams.get('verified');
         const errorParam = searchParams.get('error');
-        
+    
         if (verifiedParam === '1') {
             setIsVerified(true);
-            navigate('/login', { replace: true });
+    
+            // Remove query param without reload
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('verified');
+            navigate({ pathname: '/login', search: newParams.toString() }, { replace: true });
         }
-        
+    
         if (errorParam) {
             setError(getErrorMessage(errorParam));
         }
