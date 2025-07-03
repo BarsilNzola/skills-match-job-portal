@@ -61,7 +61,7 @@ const LoginForm = () => {
 
         try {
             const response = await loginUser({ email, password });
-            login(response.data.token);
+            login(response.token);
             navigate('/profile');
         } catch (error) {
             const message = error.response?.data?.error || 'Login failed. Please try again.';
