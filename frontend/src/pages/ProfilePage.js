@@ -214,8 +214,6 @@ const ProfilePage = () => {
   
       await fetchProfile();
       toast.success("CV uploaded successfully!");
-      setTimeout(() => window.location.reload(), 1000);
-  
     } catch (error) {
       setState(prev => ({
         ...prev,

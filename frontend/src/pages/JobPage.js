@@ -30,7 +30,7 @@ const JobPage = () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       const response = await fetchJobs();
-      setState(prev => ({ ...prev, jobs: response.data }));
+      setState(prev => ({ ...prev, jobs: response }));
     } catch (error) {
       console.error('Error fetching jobs:', error);
       setState(prev => ({ ...prev, error: 'Failed to load jobs. Please try again.' }));

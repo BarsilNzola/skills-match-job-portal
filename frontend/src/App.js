@@ -25,7 +25,16 @@ const App = () => {
 };
 
 const AppContent = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading-screen d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border text-primary" role="status" />
+      </div>
+    );
+  }
+  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const toggleSidebar = () => {
@@ -107,7 +116,12 @@ const AppContent = () => {
           <Route path="/" exact element={<Home />} />
           <Route path="/jobs" element={<JobPage />} />
           <Route path="/jobs/:id" element={<JobDetail />} />
-          <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
+          <Route
+            path="/profile"
+            element={
+              loading ? null : user ? <ProfilePage /> : <Navigate to="/login" replace />
+            }
+          />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
         </Routes>

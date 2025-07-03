@@ -6,32 +6,26 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    console.log('Token in localStorage:', token);
-  
     if (token) {
       try {
-        const decodedToken = jwtDecode(token);
-        console.log('Decoded Token in AuthContext:', decodedToken);
-  
-        // Check if the token is expired
-        const currentTime = Date.now() / 1000; // Convert to seconds
-        if (decodedToken.exp < currentTime) {
-          console.log('Token expired, removing from localStorage.');
+        const decoded = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp < currentTime) {
           localStorage.removeItem('authToken');
           setUser(null);
         } else {
-          setUser(decodedToken); // Store decoded token if valid
+          setUser(decoded);
         }
-      } catch (error) {
-        console.error('Invalid token', error);
+      } catch {
         localStorage.removeItem('authToken');
         setUser(null);
       }
-    } else {
-      setUser(null);
     }
+    setLoading(false); // ✅ Set loading to false after checking
   }, []);
   
   // ✅ Add login function
@@ -48,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
