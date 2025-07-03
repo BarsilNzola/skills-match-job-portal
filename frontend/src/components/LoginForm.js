@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   FaEnvelope, FaLock, FaSignInAlt, FaUserPlus, 
-  FaChartLine, FaBriefcase, FaCheckCircle 
+  FaChartLine, FaBriefcase, FaCheckCircle, FaExclamationTriangle 
 } from 'react-icons/fa';
 import '../styles/loginForm.css';
 
@@ -21,14 +21,12 @@ const LoginForm = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-    // Check for verification success on component mount
     useEffect(() => {
         const verifiedParam = searchParams.get('verified');
         const emailParam = searchParams.get('email');
         
         if (verifiedParam === '1' && emailParam) {
             setVerifiedEmail(decodeURIComponent(emailParam));
-            // Clean the URL
             navigate('/login', { replace: true });
         }
     }, [searchParams, navigate]);
@@ -46,12 +44,32 @@ const LoginForm = () => {
             navigate('/profile');
         } catch (error) {
             const message = error.response?.data?.error || 'Login failed. Please try again.';
-            console.error('Login Failed', error);
-            if (message.toLowerCase().includes('email')) setEmailError(message);
-            else if (message.toLowerCase().includes('password')) setPasswordError(message);
-            else setError(message);
+            
+            // Handle structured errors from API
+            if (error.response?.data?.errors) {
+                error.response.data.errors.forEach(err => {
+                    if (err.path === 'email') setEmailError(err.msg);
+                    if (err.path === 'password') setPasswordError(err.msg);
+                });
+            } else {
+                // Fallback to single error
+                if (message.toLowerCase().includes('email')) setEmailError(message);
+                else if (message.toLowerCase().includes('password')) setPasswordError(message);
+                else setError(message);
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleInputChange = (e, field) => {
+        const value = e.target.value;
+        if (field === 'email') {
+            setEmail(value);
+            if (emailError) setEmailError('');
+        } else {
+            setPassword(value);
+            if (passwordError) setPasswordError('');
         }
     };
 
@@ -104,9 +122,17 @@ const LoginForm = () => {
                             </div>
                         )}
                         
+                        {/* Main Error Message */}
+                        {error && (
+                            <div className="alert alert-danger mb-4">
+                                <div className="d-flex align-items-center">
+                                    <FaExclamationTriangle className="me-2" />
+                                    <span>{error}</span>
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit}>
-                            {error && <div className="alert alert-danger">{error}</div>}
-                            
                             {/* Email Input */}
                             <div className="input-group mb-3">
                                 <span className="input-group-text">
@@ -114,14 +140,19 @@ const LoginForm = () => {
                                 </span>
                                 <input
                                     type="email"
-                                    className="form-control"
+                                    className={`form-control ${emailError ? 'is-invalid' : ''}`}
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    onChange={(e) => handleInputChange(e, 'email')}
                                     placeholder="Enter your email"
                                     required
                                 />
                             </div>
-                            {emailError && <div className="text-danger mb-2">{emailError}</div>}
+                            {emailError && (
+                                <div className="text-danger mb-2 d-flex align-items-center">
+                                    <FaExclamationTriangle className="me-2" />
+                                    <span>{emailError}</span>
+                                </div>
+                            )}
 
                             {/* Password Input */}
                             <div className="input-group mb-3">
@@ -130,14 +161,19 @@ const LoginForm = () => {
                                 </span>
                                 <input
                                     type="password"
-                                    className="form-control"
+                                    className={`form-control ${passwordError ? 'is-invalid' : ''}`}
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) => handleInputChange(e, 'password')}
                                     placeholder="Enter your password"
                                     required
                                 />
                             </div>
-                            {passwordError && <div className="text-danger mb-2">{passwordError}</div>}
+                            {passwordError && (
+                                <div className="text-danger mb-2 d-flex align-items-center">
+                                    <FaExclamationTriangle className="me-2" />
+                                    <span>{passwordError}</span>
+                                </div>
+                            )}
 
                             <button type="submit" className="btn-login" disabled={loading}>
                                 {loading ? (

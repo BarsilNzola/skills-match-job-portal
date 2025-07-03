@@ -28,24 +28,10 @@ const RegisterForm = () => {
     });
     const navigate = useNavigate();
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-        // Clear field-specific error when user types
-        if (fieldErrors[name]) {
-            setFieldErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }));
-        }
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
+        setFieldErrors({ name: '', email: '', password: '' });
         setIsLoading(true);
 
         try {
@@ -54,18 +40,41 @@ const RegisterForm = () => {
         } catch (error) {
             const message = error?.response?.data?.error || 'Registration failed. Please try again.';
             
-            // Handle field-specific errors
-            if (message.toLowerCase().includes('name')) {
+            if (error.response?.data?.errors) {
+                const newErrors = {};
+                error.response.data.errors.forEach(err => {
+                    newErrors[err.path] = err.msg;
+                });
+                setFieldErrors(newErrors);
+            } 
+            else if (message.toLowerCase().includes('name')) {
                 setFieldErrors(prev => ({ ...prev, name: message }));
-            } else if (message.toLowerCase().includes('email')) {
+            } 
+            else if (message.toLowerCase().includes('email')) {
                 setFieldErrors(prev => ({ ...prev, email: message }));
-            } else if (message.toLowerCase().includes('password')) {
+            } 
+            else if (message.toLowerCase().includes('password')) {
                 setFieldErrors(prev => ({ ...prev, password: message }));
-            } else {
+            } 
+            else {
                 setError(message);
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        if (fieldErrors[name]) {
+            setFieldErrors(prev => ({
+                ...prev,
+                [name]: ''
+            }));
         }
     };
 
@@ -170,7 +179,14 @@ const RegisterForm = () => {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit}>
-                                {error && <div className="alert alert-danger">{error}</div>}
+                                {error && (
+                                    <div className="alert alert-danger">
+                                        <div className="d-flex align-items-center">
+                                            <span className="me-2">⚠️</span>
+                                            <span>{error}</span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Name Input */}
                                 <div className="input-group mb-3">
@@ -188,7 +204,10 @@ const RegisterForm = () => {
                                     />
                                 </div>
                                 {fieldErrors.name && (
-                                    <div className="text-danger mb-2">{fieldErrors.name}</div>
+                                    <div className="text-danger mb-2 d-flex align-items-center">
+                                        <span className="me-2">⚠️</span>
+                                        <span>{fieldErrors.name}</span>
+                                    </div>
                                 )}
 
                                 {/* Email Input */}
@@ -207,7 +226,10 @@ const RegisterForm = () => {
                                     />
                                 </div>
                                 {fieldErrors.email && (
-                                    <div className="text-danger mb-2">{fieldErrors.email}</div>
+                                    <div className="text-danger mb-2 d-flex align-items-center">
+                                        <span className="me-2">⚠️</span>
+                                        <span>{fieldErrors.email}</span>
+                                    </div>
                                 )}
 
                                 {/* Password Input */}
@@ -226,7 +248,10 @@ const RegisterForm = () => {
                                     />
                                 </div>
                                 {fieldErrors.password && (
-                                    <div className="text-danger mb-2">{fieldErrors.password}</div>
+                                    <div className="text-danger mb-2 d-flex align-items-center">
+                                        <span className="me-2">⚠️</span>
+                                        <span>{fieldErrors.password}</span>
+                                    </div>
                                 )}
 
                                 <button 
