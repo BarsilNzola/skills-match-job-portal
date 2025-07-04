@@ -96,20 +96,14 @@ const ProfilePage = () => {
 
   const fetchJobs = useCallback(async () => {
     try {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, jobs: true } }));
+      setLoading(prev => ({ ...prev, jobs: true }));
       const response = await fetchRecommendedJobs();
-      setState(prev => ({
-        ...prev,
-        recommendedJobs: response || [],
-        loading: { ...prev.loading, jobs: false },
-        error: null
-      }));
+      setRecommendedJobs(response || []);
+      setLoading(prev => ({ ...prev, jobs: false }));
+      setError(null);
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: { ...prev.loading, jobs: false },
-        error: "Failed to load recommended jobs."
-      }));
+      setLoading(prev => ({ ...prev, jobs: false }));
+      setError("Failed to load recommended jobs.");
       console.error("Error fetching jobs:", error);
     }
   }, []);
@@ -117,12 +111,12 @@ const ProfilePage = () => {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
-
+  
   useEffect(() => {
-    if (state.user) {
+    if (user) { 
       fetchJobs();
     }
-  }, [state.user, fetchJobs]);
+  }, [user, fetchJobs]); 
 
   const handleSaveProfile = async () => {
     try {
@@ -256,7 +250,7 @@ const ProfilePage = () => {
   const renderAvatarSection = () => (
     <div className="avatar-container">
       <img
-        src={state.user.profileImage}
+        src={user?.profileImage}  // Changed from state.user to user
         alt="Profile"
         className="avatar-image"
         onError={(e) => {
@@ -265,7 +259,7 @@ const ProfilePage = () => {
       />
       <label htmlFor="avatarUpload" className="avatar-edit-button" title="Change profile picture">
         <BiCamera />
-        {state.loading.cv && (
+        {loading.cv && (  // Changed from state.loading to loading
           <span className="upload-spinner"></span>
         )}
       </label>
@@ -275,7 +269,7 @@ const ProfilePage = () => {
         accept="image/*"
         style={{ display: 'none' }}
         onChange={handleAvatarUpload}
-        disabled={state.loading.cv}
+        disabled={loading.cv}  // Changed from state.loading to loading
       />
     </div>
   );
@@ -564,11 +558,11 @@ const ProfilePage = () => {
     <Container fluid className="profile-container">
       <h1 className="text-center mb-4">PROFILE</h1>
 
-      {state.loading.profile ? (
+      {loading.profile ? (
         <div className="d-flex justify-content-center">
           <Spinner animation="border" />
         </div>
-      ) : state.user ? (
+      ) : user ? (
         <Row>
           <Col md={6}>
             <Card>
@@ -576,20 +570,20 @@ const ProfilePage = () => {
                 <div className="profile-header">
                   {renderAvatarSection()}
                   <div className="profile-text">
-                    <h2>{state.user.name}</h2>
-                    <span className="email">{state.user.email}</span>
-                    {state.user.role === 'admin' && (
+                    <h2>{user.name}</h2>
+                    <span className="email">{user.email}</span>
+                    {user.role === 'admin' && (
                       <Badge bg="danger">Admin</Badge>
                     )}
                   </div>
                 </div>
 
-                {!state.ui.isEditing ? (
+                {!ui.isEditing ? (
                   <>
                     <Card.Text>
                       <strong>Skills:</strong>
                       <div className="skills-container">
-                        {state.user.skills.map((skill, index) => (
+                        {user.skills.map((skill, index) => (
                           <span key={index} className="skills-chip">{skill}</span>
                         ))}
                       </div>
@@ -600,7 +594,7 @@ const ProfilePage = () => {
                     <Card.Text>
                       <strong>Education:</strong>
                       <ul className="mb-2">
-                        {state.user.profile.education.split(',').map((edu, index) => (
+                        {user.profile.education.split(',').map((edu, index) => (
                           <li key={index}>{edu.trim()}</li>
                         ))}
                       </ul>
@@ -609,7 +603,7 @@ const ProfilePage = () => {
                     <Card.Text>
                       <strong>Experience:</strong>
                       <ul className="mb-2">
-                        {state.user.profile.experience.split(',').map((exp, index) => (
+                        {user.profile.experience.split(',').map((exp, index) => (
                           <li key={index}>{exp.trim()}</li>
                         ))}
                       </ul>
@@ -618,8 +612,8 @@ const ProfilePage = () => {
                     <Card className="mb-4">
                       <Card.Body>
                         <Card.Title>Projects</Card.Title>
-                        {state.user.profile.projects?.length > 0 ? (
-                          state.user.profile.projects.map((project, index) => (
+                        {user.profile.projects?.length > 0 ? (
+                          user.profile.projects.map((project, index) => (
                             <Card key={index} className="mb-3 project-card">
                               <Card.Body>
                                 <Card.Title>{project.title}</Card.Title>
@@ -649,11 +643,8 @@ const ProfilePage = () => {
                       <Form.Label>Skills</Form.Label>
                       <Form.Control
                         type="text"
-                        value={state.skills}
-                        onChange={(e) => setState(prev => ({
-                          ...prev,
-                          skills: e.target.value
-                        }))}
+                        value={skillsInput}
+                        onChange={(e) => setSkillsInput(e.target.value)}
                         placeholder="e.g., JavaScript, React, Node.js"
                       />
                     </Form.Group>
@@ -663,11 +654,8 @@ const ProfilePage = () => {
                       <Form.Control
                         as="textarea"
                         rows={3}
-                        value={state.education}
-                        onChange={(e) => setState(prev => ({
-                          ...prev,
-                          education: e.target.value
-                        }))}
+                        value={educationInput}
+                        onChange={(e) => setEducationInput(e.target.value)}
                         placeholder="List your education"
                       />
                     </Form.Group>
@@ -677,11 +665,8 @@ const ProfilePage = () => {
                       <Form.Control
                         as="textarea"
                         rows={3}
-                        value={state.experience}
-                        onChange={(e) => setState(prev => ({
-                          ...prev,
-                          experience: e.target.value
-                        }))}
+                        value={experienceInput}
+                        onChange={(e) => setExperienceInput(e.target.value)} 
                         placeholder="Describe your experience"
                       />
                     </Form.Group>
@@ -691,11 +676,8 @@ const ProfilePage = () => {
                       <Form.Control
                         as="textarea"
                         rows={3}
-                        value={state.projects}
-                        onChange={(e) => setState(prev => ({
-                          ...prev,
-                          projects: e.target.value
-                        }))}
+                        value={projectsInput}
+                        onChange={(e) => setProjectsInput(e.target.value)}
                         placeholder="List your projects (one per line)"
                       />
                     </Form.Group>
@@ -703,11 +685,11 @@ const ProfilePage = () => {
                 )}
 
                 <div className="mt-3">
-                  {!state.ui.isEditing ? (
-                    <Button onClick={() => setState(prev => ({
-                      ...prev,
-                      ui: { ...prev.ui, isEditing: true }
-                    }))} variant="secondary">
+                  {!ui.isEditing ? (
+                    <Button 
+                      onClick={() => setUi(prev => ({ ...prev, isEditing: true }))}
+                      variant="secondary"
+                    >
                       Edit Profile
                     </Button>
                   ) : (
@@ -729,7 +711,7 @@ const ProfilePage = () => {
                     Recommended Jobs
                   </Card.Title>
                   <Badge bg="secondary" pill>
-                    {state.recommendedJobs.length}
+                    {recommendedJobs.length}
                   </Badge>
                 </div>
                 
