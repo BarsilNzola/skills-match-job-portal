@@ -181,22 +181,14 @@ const ProfilePage = () => {
       setLoading(prev => ({ ...prev, cv: true }));
       setUi(prev => ({ ...prev, uploadProgress: 0 }));
   
-      // Create FormData and append the file
-      const formData = new FormData();
-      formData.append('cv', file);
-  
-      // Upload with progress tracking
-      const response = await api.post('/users/upload-cv', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
-          const progress = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUi(prev => ({ ...prev, uploadProgress: progress }));
-        }
+      // Using the service function
+      const response = await uploadCV(file, (progressEvent) => {
+        const progress = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        setUi(prev => ({ ...prev, uploadProgress: progress }));
       });
   
-      // Update user state with new CV info
       setUser(prev => ({
         ...prev,
         cvFile: response.data.filename,
@@ -209,8 +201,7 @@ const ProfilePage = () => {
       toast.error(error.response?.data?.error || "Failed to upload CV");
     } finally {
       setLoading(prev => ({ ...prev, cv: false }));
-      setUi(prev => ({ ...prev, uploadProgress: 0 }));
-      e.target.value = ''; // Reset input
+      e.target.value = '';
     }
   };  
 

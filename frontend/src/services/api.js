@@ -110,13 +110,15 @@ export const getAvatarUrl = (userId) => {
 
 export const uploadCV = (file, onProgress) => {
     const formData = new FormData();
-    formData.append('cv', file);
+    formData.append('cv', file, file.name);
     
     return api.post('/users/upload-cv', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 
+        'Content-Type': 'multipart/form-data',
+      },
       onUploadProgress: onProgress
     });
-};
+  };
 
 export const downloadCV = async () => {
     try {
