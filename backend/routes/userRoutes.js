@@ -113,7 +113,7 @@ router.post('/register', async (req, res) => {
         });
 
         // Send verification email
-        await sendVerificationEmail(user.email, verificationToken);
+        await sendVerificationEmail(user.email, verificationToken, user.name);
 
         res.status(201).json({ 
             message: 'Registration successful! Please check your email to verify your account.',
