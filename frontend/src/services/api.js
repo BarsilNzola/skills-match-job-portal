@@ -108,17 +108,13 @@ export const getAvatarUrl = (userId) => {
         .catch(() => `${BASE_URL}/default-avatar.jpg`);
 };
 
-export const uploadCV = (file, onProgress) => {
+export const uploadCV = (file) => {
     const formData = new FormData();
-    formData.append('cv', file, file.name);
-    
+    formData.append('cv', file, file.name); // Added filename for better backend handling
     return api.post('/users/upload-cv', formData, {
-      headers: { 
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: onProgress
-    });
-  };
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(res => res.data);
+};
 
 export const downloadCV = async () => {
     try {

@@ -175,33 +175,34 @@ const ProfilePage = () => {
   
   const handleCVUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+      toast.error('Please select a file first');
+      return;
+    }
   
     try {
+      // Set loading state
       setLoading(prev => ({ ...prev, cv: true }));
       setUi(prev => ({ ...prev, uploadProgress: 0 }));
   
-      // Using the service function
-      const response = await uploadCV(file, (progressEvent) => {
-        const progress = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total
-        );
-        setUi(prev => ({ ...prev, uploadProgress: progress }));
-      });
+      // Upload the file (using your existing service function)
+      await uploadCV(file);
   
-      setUser(prev => ({
-        ...prev,
-        cvFile: response.data.filename,
-        cvFileType: response.data.fileType
-      }));
+      // Refresh the entire profile
+      await fetchProfile();
   
       toast.success("CV uploaded successfully!");
     } catch (error) {
       console.error("CV upload error:", error);
-      toast.error(error.response?.data?.error || "Failed to upload CV");
+      toast.error(
+        error.response?.data?.error || 
+        "Failed to upload CV. Please try again."
+      );
     } finally {
+      // Reset states
       setLoading(prev => ({ ...prev, cv: false }));
-      e.target.value = '';
+      setUi(prev => ({ ...prev, uploadProgress: 0 }));
+      e.target.value = ''; // Reset input
     }
   };  
 
