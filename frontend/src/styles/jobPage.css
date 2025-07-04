@@ -150,6 +150,10 @@
     line-height: 1.6;
 }
 
+.modal-body .job-description p {
+    color: var(--dark-text) !important;
+}
+
 .modal-footer {
     border-top-color: var(--border-color);
 }
