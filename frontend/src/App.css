@@ -76,6 +76,10 @@
   padding: 2rem 0;
 }
 
+.Toastify__toast-container {
+  z-index: 9999;
+}
+
 .loading-screen {
   background-color: #f8f9fa;
   width: 100%;

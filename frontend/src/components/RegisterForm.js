@@ -14,11 +14,7 @@ const RegisterForm = () => {
         password: ''
     });
     const [error, setError] = useState(null);
-    const [fieldErrors, setFieldErrors] = useState({
-        name: '',
-        email: '',
-        password: ''
-    });
+    const [fieldErrors, setFieldErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [isRegistered, setIsRegistered] = useState(false);
     const [resendStatus, setResendStatus] = useState({
@@ -31,7 +27,7 @@ const RegisterForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
-        setFieldErrors({ name: '', email: '', password: '' });
+        setFieldErrors({});
         setIsLoading(true);
 
         try {
@@ -41,17 +37,17 @@ const RegisterForm = () => {
             const response = error?.response?.data;
         
             if (response?.errors?.length) {
-                const newErrors = {};
-                response.errors.forEach(err => {
-                    newErrors[err.path] = err.msg;
-                });
-                setFieldErrors(newErrors);
-            } else if (response?.error) {
-                // Generic error (not field-specific)
-                setError(response.error);
+                // Convert array of errors to object with field names as keys
+                const errorsObj = response.errors.reduce((acc, err) => {
+                    acc[err.path] = err.msg;
+                    return acc;
+                }, {});
+                setFieldErrors(errorsObj);
+                
+                // Set first error as general error for better visibility
+                setError(response.errors[0].msg);
             } else {
-                // Unexpected error
-                setError('Registration failed. Please try again.');
+                setError(response?.error || 'Registration failed. Please try again.');
             }
         } finally {
             setIsLoading(false);
@@ -64,12 +60,15 @@ const RegisterForm = () => {
             ...prev,
             [name]: value
         }));
+        // Clear error for the current field when typing
         if (fieldErrors[name]) {
             setFieldErrors(prev => ({
                 ...prev,
                 [name]: ''
             }));
         }
+        // Clear general error when any field changes
+        if (error) setError(null);
     };
 
     const handleResendVerification = async () => {
@@ -174,7 +173,7 @@ const RegisterForm = () => {
                         ) : (
                             <form onSubmit={handleSubmit}>
                                 {error && (
-                                    <div className="alert alert-danger">
+                                    <div className="alert alert-danger mb-3">
                                         <div className="d-flex align-items-center">
                                             <span className="me-2">⚠️</span>
                                             <span>{error}</span>
@@ -183,74 +182,89 @@ const RegisterForm = () => {
                                 )}
 
                                 {/* Name Input */}
-                                <div className="input-group mb-3">
-                                    <span className="input-group-text">
-                                        <FaUser />
-                                    </span>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        className={`form-control ${fieldErrors.name ? 'is-invalid' : ''}`}
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        placeholder="Enter your name"
-                                        required
-                                    />
-                                </div>
-                                {fieldErrors.name && (
-                                    <div className="text-danger mb-2 d-flex align-items-center">
-                                        <span className="me-2">⚠️</span>
-                                        <span>{fieldErrors.name}</span>
+                                <div className="form-group mb-3">
+                                    <label htmlFor="name" className="form-label">Full Name</label>
+                                    <div className="input-group">
+                                        <span className="input-group-text">
+                                            <FaUser />
+                                        </span>
+                                        <input
+                                            type="text"
+                                            id="name"
+                                            name="name"
+                                            className={`form-control ${fieldErrors.name ? 'is-invalid' : ''}`}
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                            placeholder="Enter your full name"
+                                            required
+                                        />
                                     </div>
-                                )}
+                                    {fieldErrors.name && (
+                                        <div className="invalid-feedback d-flex align-items-center">
+                                            <span className="me-2">⚠️</span>
+                                            <span>{fieldErrors.name}</span>
+                                        </div>
+                                    )}
+                                </div>
 
                                 {/* Email Input */}
-                                <div className="input-group mb-3">
-                                    <span className="input-group-text">
-                                        <FaEnvelope />
-                                    </span>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        className={`form-control ${fieldErrors.email ? 'is-invalid' : ''}`}
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        placeholder="Enter your email"
-                                        required
-                                    />
-                                </div>
-                                {fieldErrors.email && (
-                                    <div className="text-danger mb-2 d-flex align-items-center">
-                                        <span className="me-2">⚠️</span>
-                                        <span>{fieldErrors.email}</span>
+                                <div className="form-group mb-3">
+                                    <label htmlFor="email" className="form-label">Email</label>
+                                    <div className="input-group">
+                                        <span className="input-group-text">
+                                            <FaEnvelope />
+                                        </span>
+                                        <input
+                                            type="email"
+                                            id="email"
+                                            name="email"
+                                            className={`form-control ${fieldErrors.email ? 'is-invalid' : ''}`}
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            placeholder="Enter your email"
+                                            required
+                                        />
                                     </div>
-                                )}
+                                    {fieldErrors.email && (
+                                        <div className="invalid-feedback d-flex align-items-center">
+                                            <span className="me-2">⚠️</span>
+                                            <span>{fieldErrors.email}</span>
+                                        </div>
+                                    )}
+                                </div>
 
                                 {/* Password Input */}
-                                <div className="input-group mb-3">
-                                    <span className="input-group-text">
-                                        <FaLock />
-                                    </span>
-                                    <input
-                                        type="password"
-                                        name="password"
-                                        className={`form-control ${fieldErrors.password ? 'is-invalid' : ''}`}
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        placeholder="Enter your password"
-                                        required
-                                    />
-                                </div>
-                                {fieldErrors.password && (
-                                    <div className="text-danger mb-2 d-flex align-items-center">
-                                        <span className="me-2">⚠️</span>
-                                        <span>{fieldErrors.password}</span>
+                                <div className="form-group mb-4">
+                                    <label htmlFor="password" className="form-label">Password</label>
+                                    <div className="input-group">
+                                        <span className="input-group-text">
+                                            <FaLock />
+                                        </span>
+                                        <input
+                                            type="password"
+                                            id="password"
+                                            name="password"
+                                            className={`form-control ${fieldErrors.password ? 'is-invalid' : ''}`}
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            placeholder="Enter your password"
+                                            required
+                                        />
                                     </div>
-                                )}
+                                    {fieldErrors.password && (
+                                        <div className="invalid-feedback d-flex align-items-center">
+                                            <span className="me-2">⚠️</span>
+                                            <span>{fieldErrors.password}</span>
+                                        </div>
+                                    )}
+                                    <div className="form-text">
+                                        Password must be at least 8 characters long
+                                    </div>
+                                </div>
 
                                 <button 
                                     type="submit" 
-                                    className="btn-register" 
+                                    className="btn-register w-100" 
                                     disabled={isLoading}
                                 >
                                     {isLoading ? (
@@ -266,7 +280,7 @@ const RegisterForm = () => {
                                     )}
                                 </button>
 
-                                <div className="login-link">
+                                <div className="login-link text-center mt-3">
                                     Already have an account? <a href="/login">Sign in</a>
                                 </div>
                             </form>

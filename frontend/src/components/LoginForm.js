@@ -10,15 +10,20 @@ import {
 import '../styles/loginForm.css';
 
 const LoginForm = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState(null);
-    const [emailError, setEmailError] = useState('');
-    const [passwordError, setPasswordError] = useState('');
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
+    const [errors, setErrors] = useState({
+        email: '',
+        password: '',
+        general: ''
+    });
     const [loading, setLoading] = useState(false);
     const [searchParams] = useSearchParams();
     const [showResend, setShowResend] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
 
@@ -28,7 +33,6 @@ const LoginForm = () => {
     
         if (verifiedParam === '1') {
             setIsVerified(true);
-    
             // Remove query param without reload
             const newParams = new URLSearchParams(searchParams);
             newParams.delete('verified');
@@ -36,86 +40,102 @@ const LoginForm = () => {
         }
     
         if (errorParam) {
-            setError(getErrorMessage(errorParam));
+            setErrors(prev => ({
+                ...prev,
+                general: getErrorMessage(errorParam)
+            }));
         }
     }, [searchParams, navigate]);
 
     const getErrorMessage = (errorCode) => {
-        switch(errorCode) {
-            case 'missing_parameters':
-                return 'Verification link was incomplete. Please request a new verification email.';
-            case 'invalid_token':
-                return 'Invalid or expired verification link. Please request a new verification email.';
-            case 'verification_failed':
-                return 'Verification failed. Please try again or contact support.';
-            default:
-                return 'An error occurred during verification.';
-        }
+        const errorMessages = {
+            'missing_parameters': 'Verification link was incomplete. Please request a new verification email.',
+            'invalid_token': 'Invalid or expired verification link. Please request a new verification email.',
+            'verification_failed': 'Verification failed. Please try again or contact support.',
+            'default': 'An error occurred during verification.'
+        };
+        return errorMessages[errorCode] || errorMessages.default;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
-        setEmailError('');
-        setPasswordError('');
+        setErrors({ email: '', password: '', general: '' });
         setLoading(true);
 
         try {
-            const response = await loginUser({ email, password });
+            const response = await loginUser(formData);
             login(response.token);
             navigate('/profile');
         } catch (error) {
             const response = error?.response?.data;
           
-            // ✅ Handle detailed field errors
             if (response?.errors?.length) {
-              response.errors.forEach(err => {
-                if (err.path === 'email') setEmailError(err.msg);
-                if (err.path === 'password') setPasswordError(err.msg);
-              });
-            }
-          
-            // ✅ Handle "Email not verified"
+                // Convert array of errors to object with field names as keys
+                const newErrors = response.errors.reduce((acc, err) => {
+                    acc[err.path] = err.msg;
+                    return acc;
+                }, {});
+                
+                setErrors(prev => ({
+                    ...prev,
+                    ...newErrors,
+                    general: response.errors[0].msg // Show first error as general message
+                }));
+            } 
             else if (response?.error === 'Email not verified') {
-              setError('Your email is not verified.');
-              setShowResend(true); // <== You need to declare this with useState
+                setErrors({
+                    email: 'Email not verified',
+                    general: 'Your email is not verified. Please check your inbox for the verification link.'
+                });
+                setShowResend(true);
             }
-          
-            // ✅ Handle other specific error messages
-            else if (response?.error) {
-              const message = response.error;
-              if (message.toLowerCase().includes('email')) setEmailError(message);
-              else if (message.toLowerCase().includes('password')) setPasswordError(message);
-              else setError(message);
-            }
-          
-            // ✅ Fallback for completely unknown errors
             else {
-              setError('Login failed. Please try again.');
+                setErrors(prev => ({
+                    ...prev,
+                    general: response?.error || 'Login failed. Please try again.'
+                }));
             }
-        }
-           finally {
+        } finally {
             setLoading(false);
         }
     };
 
-    const handleResendVerification = async (emailToResend) => {
+    const handleResendVerification = async () => {
+        setResendLoading(true);
         try {
-          await resendVerificationEmail({ email: emailToResend });
-          setError('Verification email resent successfully!');
-        } catch (err) {
-          setError('Failed to resend verification email. Please try again.');
+            await resendVerificationEmail({ email: formData.email });
+            setErrors(prev => ({
+                ...prev,
+                general: 'Verification email resent successfully! Check your inbox.'
+            }));
+            setShowResend(false);
+        } catch (error) {
+            setErrors(prev => ({
+                ...prev,
+                general: error?.response?.data?.error || 'Failed to resend verification email.'
+            }));
+        } finally {
+            setResendLoading(false);
         }
     };
 
-    const handleInputChange = (e, field) => {
-        const value = e.target.value;
-        if (field === 'email') {
-            setEmail(value);
-            if (emailError) setEmailError('');
-        } else {
-            setPassword(value);
-            if (passwordError) setPasswordError('');
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        // Clear error for the current field when typing
+        if (errors[name] || errors.general) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: '',
+                general: name === 'email' ? '' : prev.general
+            }));
+        }
+        // Hide resend button if email changes
+        if (name === 'email' && showResend) {
+            setShowResend(false);
         }
     };
 
@@ -166,76 +186,99 @@ const LoginForm = () => {
                         )}
                         
                         {/* Error Messages */}
-                        {error && (
-                            <div className="alert alert-danger mb-4 d-flex align-items-center">
-                            <FaExclamationTriangle className="me-2" />
-                            <span>{error}</span>
-                            {showResend && (
-                                <button
-                                className="btn btn-link p-0 ms-2"
-                                onClick={() => handleResendVerification(email)}
-                                >
-                                Resend verification email
-                                </button>
-                            )}
+                        {errors.general && (
+                            <div className={`alert ${showResend ? 'alert-warning' : 'alert-danger'} mb-4`}>
+                                <div className="d-flex align-items-center">
+                                    <FaExclamationTriangle className="me-2" />
+                                    <span>{errors.general}</span>
+                                </div>
+                                {showResend && (
+                                    <button
+                                        className="btn btn-link p-0 mt-2 text-decoration-none"
+                                        onClick={handleResendVerification}
+                                        disabled={resendLoading}
+                                    >
+                                        {resendLoading ? (
+                                            <span className="spinner-border spinner-border-sm me-2"></span>
+                                        ) : null}
+                                        Resend verification email
+                                    </button>
+                                )}
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleSubmit} noValidate>
                             {/* Email Input */}
-                            <div className="input-group mb-3">
-                                <span className="input-group-text">
-                                    <FaEnvelope />
-                                </span>
-                                <input
-                                    type="email"
-                                    className={`form-control ${emailError ? 'is-invalid' : ''}`}
-                                    value={email}
-                                    onChange={(e) => handleInputChange(e, 'email')}
-                                    placeholder="Enter your email"
-                                    required
-                                />
-                            </div>
-                            {emailError && (
-                                <div className="text-danger mb-2 d-flex align-items-center">
-                                    <FaExclamationTriangle className="me-2" />
-                                    <span>{emailError}</span>
+                            <div className="form-group mb-3">
+                                <label htmlFor="email" className="form-label">Email</label>
+                                <div className="input-group">
+                                    <span className="input-group-text">
+                                        <FaEnvelope />
+                                    </span>
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="Enter your email"
+                                        required
+                                    />
                                 </div>
-                            )}
+                                {errors.email && (
+                                    <div className="invalid-feedback d-flex align-items-center">
+                                        <FaExclamationTriangle className="me-2" />
+                                        <span>{errors.email}</span>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Password Input */}
-                            <div className="input-group mb-3">
-                                <span className="input-group-text">
-                                    <FaLock />
-                                </span>
-                                <input
-                                    type="password"
-                                    className={`form-control ${passwordError ? 'is-invalid' : ''}`}
-                                    value={password}
-                                    onChange={(e) => handleInputChange(e, 'password')}
-                                    placeholder="Enter your password"
-                                    required
-                                />
-                            </div>
-                            {passwordError && (
-                                <div className="text-danger mb-2 d-flex align-items-center">
-                                    <FaExclamationTriangle className="me-2" />
-                                    <span>{passwordError}</span>
+                            <div className="form-group mb-4">
+                                <label htmlFor="password" className="form-label">Password</label>
+                                <div className="input-group">
+                                    <span className="input-group-text">
+                                        <FaLock />
+                                    </span>
+                                    <input
+                                        type="password"
+                                        id="password"
+                                        name="password"
+                                        className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="Enter your password"
+                                        required
+                                    />
                                 </div>
-                            )}
+                                {errors.password && (
+                                    <div className="invalid-feedback d-flex align-items-center">
+                                        <FaExclamationTriangle className="me-2" />
+                                        <span>{errors.password}</span>
+                                    </div>
+                                )}
+                            </div>
 
-                            <button type="submit" className="btn-login" disabled={loading}>
+                            <button 
+                                type="submit" 
+                                className="btn-login w-100" 
+                                disabled={loading}
+                            >
                                 {loading ? (
-                                    <div className="spinner-border spinner-border-sm" role="status"></div>
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2"></span>
+                                        Signing In...
+                                    </>
                                 ) : (
                                     <>
-                                        <FaSignInAlt style={{ marginRight: '8px' }} />
+                                        <FaSignInAlt className="me-2" />
                                         Sign In
                                     </>
                                 )}
                             </button>
 
-                            <div className="register-link">
+                            <div className="register-link text-center mt-3">
                                 Don't have an account? <a href="/register">Create one</a>
                             </div>
                         </form>

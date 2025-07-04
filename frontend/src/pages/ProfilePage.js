@@ -30,66 +30,66 @@ import { FaBriefcase, FaMapMarkerAlt, FaStar, FaSort, FaFilter, FaExternalLinkAl
 import '../styles/profilePage.css';
 
 const ProfilePage = () => {
-  const [state, setState] = useState({
-    user: null,
-    skills: '',
-    education: '',
-    experience: '',
-    projects: '',
-    recommendedJobs: [],
-    loading: {
-      profile: true,
-      jobs: true,
-      cv: false
-    },
-    converting: {
-      pdf: false,
-      docx: false
-    },
-    ui: {
-      isEditing: false,
-      showModal: false,
-      uploadProgress: 0
-    },
-    sortOption: 'match',
-    showSortDropdown: false,
-    error: null
+  const [user, setUser] = useState(null);
+  const [skillsInput, setSkillsInput] = useState(''); // For edit form
+  const [educationInput, setEducationInput] = useState(''); // For edit form
+  const [experienceInput, setExperienceInput] = useState(''); // For edit form
+  const [projectsInput, setProjectsInput] = useState(''); // For edit form
+  const [recommendedJobs, setRecommendedJobs] = useState([]);
+
+  const [loading, setLoading] = useState({
+    profile: true,
+    jobs: true,
+    cv: false,
+    avatar: false
   });
+
+  const [converting, setConverting] = useState({
+    pdf: false,
+    docx: false
+  });
+
+  const [ui, setUi] = useState({
+    isEditing: false,
+    showModal: false,
+    uploadProgress: 0,
+    showSortDropdown: false,
+    sortOption: 'match' // Moved here since it's UI related
+  });
+
+  const [error, setError] = useState(null);
 
   const fetchProfile = useCallback(async () => {
     try {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, profile: true } }));
+      setLoading(prev => ({ ...prev, profile: true }));
+      
       const response = await fetchUserProfile();
-  
       let profileImage = response.profileImage;
+      
       if (!profileImage) {
         profileImage = await getAvatarUrl(response.id);
       }
   
-      setState(prev => ({
-        ...prev,
-        user: {
-          ...response,
-          skills: response.skills || [],
-          profile: response.profile || { education: '', experience: '', projects: [] },
-          profileImage: profileImage,
-          cvFile: response.cvFile || null,
-          cvFileType: response.cvFileType || null
-        },
-        skills: response.skills?.join(', ') || '',
-        education: response.profile?.education || '',
-        experience: response.profile?.experience || '',
-        projects: response.profile?.projects?.join('\n') || '',
-        loading: { ...prev.loading, profile: false },
-        error: null
-      }));
+      setUser({
+        ...response,
+        skills: response.skills || [],
+        profile: response.profile || { education: '', experience: '', projects: [] },
+        profileImage,
+        cvFile: response.cvFile || null,
+        cvFileType: response.cvFileType || null
+      });
+  
+      // Set form inputs
+      setSkillsInput(response.skills?.join(', ') || '');
+      setEducationInput(response.profile?.education || '');
+      setExperienceInput(response.profile?.experience || '');
+      setProjectsInput(response.profile?.projects?.join('\n') || '');
+  
+      setLoading(prev => ({ ...prev, profile: false }));
+      setError(null);
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: { ...prev.loading, profile: false },
-        error: "Failed to load profile. Please try again."
-      }));
-      console.error("Error fetching user profile:", error);
+      setLoading(prev => ({ ...prev, profile: false }));
+      setError("Failed to load profile. Please try again.");
     }
   }, []);
   
@@ -126,36 +126,31 @@ const ProfilePage = () => {
 
   const handleSaveProfile = async () => {
     try {
-      const updatedSkills = state.skills.split(',').map(skill => skill.trim());
+      const updatedSkills = skillsInput.split(',').map(skill => skill.trim());
       const updatedProfile = {
-        education: state.education,
-        experience: state.experience,
-        projects: state.projects.split('\n').map(project => project.trim()),
+        education: educationInput,
+        experience: experienceInput,
+        projects: projectsInput.split('\n').map(project => project.trim()),
       };
-
+  
       await Promise.all([
         updateUserSkills({ skills: updatedSkills }),
         updateUserProfile(updatedProfile)
       ]);
-
-      setState(prev => ({
+  
+      setUser(prev => ({
         ...prev,
-        user: {
-          ...prev.user,
-          skills: updatedSkills,
-          profile: {
-            ...prev.user.profile,
-            ...updatedProfile
-          }
-        },
-        ui: { ...prev.ui, isEditing: false },
-        error: null
+        skills: updatedSkills,
+        profile: {
+          ...prev.profile,
+          ...updatedProfile
+        }
       }));
-
+  
+      setUi(prev => ({ ...prev, isEditing: false }));
       toast.success("Profile updated successfully!");
     } catch (error) {
-      setState(prev => ({ ...prev, error: "Failed to update profile." }));
-      console.error("Profile update error:", error);
+      setError("Failed to update profile.");
     }
   };
 
@@ -164,45 +159,56 @@ const ProfilePage = () => {
     if (!file) return;
   
     try {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, avatar: true } }));
-  
-      await uploadAvatar(file); // Send to backend
-      await fetchProfile();     // Refresh updated info
-  
-      toast.success("Profile picture updated!");
-    } catch (error) {
-      setState(prev => ({
+      setLoading(prev => ({ ...prev, avatar: true }));
+      
+      // Upload and get response with new URL
+      const { profileImage } = await uploadAvatar(file);
+      
+      // Optimistically update the UI with new image
+      setUser(prev => ({
         ...prev,
-        error: error.message || "Failed to upload avatar."
+        profileImage: profileImage || URL.createObjectURL(file) // Fallback to local URL
       }));
+      
+      toast.success("Profile picture updated successfully!");
+    } catch (error) {
+      toast.error(error.message || "Failed to update avatar");
     } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, avatar: false } }));
-      e.target.value = '';
+      setLoading(prev => ({ ...prev, avatar: false }));
+      e.target.value = ''; // Reset input
     }
-  };  
-
+  };
+  
   const handleCVUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
   
     try {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, cv: true } }));
+      setLoading(prev => ({ ...prev, cv: true }));
+      setUi(prev => ({ ...prev, uploadProgress: 0 }));
+      
+      // Upload with progress tracking
+      const formData = new FormData();
+      formData.append('cv', file);
+      
+      const { filename, fileType } = await uploadCV(formData, (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUi(prev => ({ ...prev, uploadProgress: progress }));
+      });
   
-      await uploadCV(file);     // Send to backend
-      await fetchProfile();     // Refresh CV info
-  
+      // Update user state
+      setUser(prev => ({
+        ...prev,
+        cvFile: filename,
+        cvFileType: fileType
+      }));
+      
       toast.success("CV uploaded successfully!");
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: "Failed to upload CV. Please try again."
-      }));
+      toast.error(error.message || "Failed to upload CV");
     } finally {
-      setState(prev => ({
-        ...prev,
-        loading: { ...prev.loading, cv: false },
-        ui: { ...prev.ui, uploadProgress: 0 }
-      }));
+      setLoading(prev => ({ ...prev, cv: false }));
+      setUi(prev => ({ ...prev, uploadProgress: 0 }));
       e.target.value = '';
     }
   };  
@@ -211,28 +217,23 @@ const ProfilePage = () => {
     const conversionKey = targetFormat === 'pdf' ? 'pdf' : 'docx';
     
     try {
-      setState(prev => ({
-        ...prev,
-        converting: { ...prev.converting, [conversionKey]: true },
-        error: null
-      }));
-
-      const { data } = await convertCV(targetFormat);
+      setConverting(prev => ({ ...prev, [conversionKey]: true }));
       
-      if (data.success) {
-        await fetchProfile();
-        toast.success(`CV converted to ${targetFormat.toUpperCase()}!`);
-      }
+      // Convert and get response
+      const { filename, fileType } = await convertCV(targetFormat);
+      
+      // Update user state
+      setUser(prev => ({
+        ...prev,
+        cvFile: filename,
+        cvFileType: fileType
+      }));
+      
+      toast.success(`CV converted to ${targetFormat.toUpperCase()} successfully!`);
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: `Conversion failed: ${error.message}`
-      }));
+      toast.error(error.message || `Failed to convert CV to ${targetFormat}`);
     } finally {
-      setState(prev => ({
-        ...prev,
-        converting: { ...prev.converting, [conversionKey]: false }
-      }));
+      setConverting(prev => ({ ...prev, [conversionKey]: false }));
     }
   };
 
@@ -245,7 +246,7 @@ const ProfilePage = () => {
   };    
   
   const handleSortChange = (option) => {
-    setState(prev => ({
+    setUi(prev => ({
       ...prev,
       sortOption: option,
       showSortDropdown: false
@@ -284,28 +285,29 @@ const ProfilePage = () => {
       <Card.Body>
         <Card.Title>CV Management</Card.Title>
         
-        {state.user.cvFile ? (
+        {user?.cvFile ? (
           <>
-            <p>Current CV: {state.user.cvFile} ({state.user.cvFileType?.toUpperCase()})</p>
+            <p>Current CV: {user.cvFile} ({user.cvFileType?.toUpperCase()})</p>
             <div className="d-flex flex-wrap gap-2 mb-3">
-              <Button variant="success" onClick={downloadCV}>
+              <Button variant="success" onClick={handleCVDownload}>
                 Download CV
               </Button>
               
               <Button 
                 variant="primary" 
                 onClick={() => document.getElementById('cvUpload').click()}
+                disabled={loading.cv}
               >
                 Replace CV
               </Button>
               
-              {state.user.cvFileType !== 'pdf' && (
+              {user.cvFileType !== 'pdf' && (
                 <Button 
                   variant="info" 
                   onClick={() => handleCVConversion('pdf')}
-                  disabled={state.converting.pdf}
+                  disabled={converting.pdf}
                 >
-                  {state.converting.pdf ? (
+                  {converting.pdf ? (
                     <>
                       <Spinner as="span" size="sm" className="me-2" />
                       Converting...
@@ -316,13 +318,13 @@ const ProfilePage = () => {
                 </Button>
               )}
               
-              {state.user.cvFileType === 'pdf' && (
+              {user.cvFileType === 'pdf' && (
                 <Button 
                   variant="info" 
                   onClick={() => handleCVConversion('docx')}
-                  disabled={state.converting.docx}
+                  disabled={converting.docx}
                 >
-                  {state.converting.docx ? (
+                  {converting.docx ? (
                     <>
                       <Spinner as="span" size="sm" className="me-2" />
                       Converting...
@@ -334,10 +336,10 @@ const ProfilePage = () => {
               )}
             </div>
             
-            {state.ui.uploadProgress > 0 && state.ui.uploadProgress < 100 && (
+            {ui.uploadProgress > 0 && ui.uploadProgress < 100 && (
               <ProgressBar 
-                now={state.ui.uploadProgress} 
-                label={`${state.ui.uploadProgress}%`} 
+                now={ui.uploadProgress} 
+                label={`${ui.uploadProgress}%`} 
                 className="mt-2"
               />
             )}
@@ -348,9 +350,9 @@ const ProfilePage = () => {
             <Button 
               variant="primary" 
               onClick={() => document.getElementById('cvUpload').click()}
-              disabled={state.loading.cv}
+              disabled={loading.cv}
             >
-              {state.loading.cv ? (
+              {loading.cv ? (
                 <>
                   <Spinner as="span" size="sm" className="me-2" />
                   Uploading...
@@ -368,14 +370,14 @@ const ProfilePage = () => {
           accept=".pdf,.doc,.docx" 
           style={{ display: 'none' }}
           onChange={handleCVUpload}
-          disabled={state.loading.cv}
+          disabled={loading.cv}
         />
       </Card.Body>
     </Card>
   );
 
   const renderRecommendedJobs = () => {
-    if (state.loading.jobs) {
+    if (loading.jobs) {
       return (
         <div className="d-flex justify-content-center py-4">
           <Spinner animation="border" variant="primary" />
@@ -384,9 +386,9 @@ const ProfilePage = () => {
       );
     }
   
-    const sortedJobs = [...state.recommendedJobs].sort((a, b) => {
-      if (state.sortOption === 'match') return b.similarity - a.similarity;
-      if (state.sortOption === 'date') return new Date(b.createdAt) - new Date(a.createdAt);
+    const sortedJobs = [...recommendedJobs].sort((a, b) => {
+      if (ui.sortOption === 'match') return b.similarity - a.similarity;
+      if (ui.sortOption === 'date') return new Date(b.createdAt) - new Date(a.createdAt);
       return 0;
     });
   
@@ -406,22 +408,22 @@ const ProfilePage = () => {
             <Button 
               variant="outline-secondary" 
               size="sm"
-              onClick={() => setState(prev => ({...prev, showSortDropdown: !prev.showSortDropdown}))}
+              onClick={() => setUi(prev => ({...prev, showSortDropdown: !prev.showSortDropdown}))}
             >
               <FaSort className="me-1" />
-              Sort: {state.sortOption === 'match' ? 'Best Match' : 'Most Recent'}
+              Sort: {ui.sortOption === 'match' ? 'Best Match' : 'Most Recent'}
             </Button>
             
-            {state.showSortDropdown && (
+            {ui.showSortDropdown && (
               <div className="sort-dropdown">
                 <div 
-                  className={`dropdown-item ${state.sortOption === 'match' ? 'active' : ''}`}
+                  className={`dropdown-item ${ui.sortOption === 'match' ? 'active' : ''}`}
                   onClick={() => handleSortChange('match')}
                 >
                   Best Match
                 </div>
                 <div 
-                  className={`dropdown-item ${state.sortOption === 'date' ? 'active' : ''}`}
+                  className={`dropdown-item ${ui.sortOption === 'date' ? 'active' : ''}`}
                   onClick={() => handleSortChange('date')}
                 >
                   Most Recent
@@ -437,6 +439,7 @@ const ProfilePage = () => {
   
         {sortedJobs.map((job) => (
           <Card key={job.id} className="recommended-job-card mb-3">
+            {/* Rest of the job card rendering remains the same */}
             <Card.Body>
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <div>

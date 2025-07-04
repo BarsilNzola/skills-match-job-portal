@@ -92,12 +92,14 @@ export const updateUserProfile = (profileData) =>
        .catch(handleApiError);
 
 // ==================== FILE UPLOADS ====================
-export const uploadAvatar = (file) => {
+export const uploadAvatar = async (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return api.post('/users/upload-avatar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    }).then(res => res.data);
+    
+    const response = await api.post('/users/upload-avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data; // { profileImage: "url" }
 };
 
 export const getAvatarUrl = (userId) => {
@@ -106,12 +108,15 @@ export const getAvatarUrl = (userId) => {
         .catch(() => `${BASE_URL}/default-avatar.jpg`);
 };
 
-export const uploadCV = (file) => {
+export const uploadCV = async (file, onProgress) => {
     const formData = new FormData();
     formData.append('cv', file);
-    return api.post('/users/upload-cv', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    }).then(res => res.data);
+    
+    const response = await api.post('/users/upload-cv', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress
+    });
+    return response.data; // { filename: "file.pdf", fileType: "pdf" }
 };
 
 export const downloadCV = async () => {
@@ -134,9 +139,10 @@ export const downloadCV = async () => {
     }
 };
     
-export const convertCV = (targetFormat) => 
-    api.post('/users/convert-cv', { format: targetFormat })
-       .then(res => res.data);
+export const convertCV = async (targetFormat) => {
+    const response = await api.post('/users/convert-cv', { format: targetFormat });
+    return response.data; // { filename: "file.pdf", fileType: "pdf" }
+};
 
 // ==================== JOBS ====================
 export const fetchRecommendedJobs = async () => {
