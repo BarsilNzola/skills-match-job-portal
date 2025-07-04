@@ -172,7 +172,7 @@ const ProfilePage = () => {
         ...prev,
         user: {
           ...prev.user,
-          profileImage: response.data.url || response.data.profileImage
+          profileImage: response.url || response.profileImage
         },
         error: null
       }));
