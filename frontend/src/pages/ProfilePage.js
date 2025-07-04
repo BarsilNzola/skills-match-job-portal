@@ -232,9 +232,17 @@ const ProfilePage = () => {
 
   const handleCVDownload = async () => {
     try {
-        await downloadCV();
+      setLoading(prev => ({ ...prev, download: true }));
+      await downloadCV(); // Using your proven service function
+      
+      // Optional: Add success feedback if needed
+      toast.success("CV download started!");
     } catch (error) {
-        alert('Failed to download CV. Please try again.');
+      console.error('Download error:', error);
+      // Error is already handled in the service function
+      // Add additional handling here if needed
+    } finally {
+      setLoading(prev => ({ ...prev, download: false }));
     }
   };    
   

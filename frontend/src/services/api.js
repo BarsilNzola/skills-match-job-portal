@@ -110,7 +110,7 @@ export const getAvatarUrl = (userId) => {
 
 export const uploadCV = (file) => {
     const formData = new FormData();
-    formData.append('cv', file, file.name); // Added filename for better backend handling
+    formData.append('cv', file); // Added filename for better backend handling
     return api.post('/users/upload-cv', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => res.data);
