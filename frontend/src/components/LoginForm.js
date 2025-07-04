@@ -17,6 +17,7 @@ const LoginForm = () => {
     const [passwordError, setPasswordError] = useState('');
     const [loading, setLoading] = useState(false);
     const [searchParams] = useSearchParams();
+    const [showResend, setShowResend] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
