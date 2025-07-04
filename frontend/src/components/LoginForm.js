@@ -64,31 +64,36 @@ const LoginForm = () => {
             login(response.token);
             navigate('/profile');
         } catch (error) {
-            const message = error.response?.data?.error || 'Login failed. Please try again.';
-
-            if (error.response?.data?.errors) {
-                error.response.data.errors.forEach(err => {
+            const response = error?.response?.data;
+          
+            // ✅ Handle detailed field errors
+            if (response?.errors?.length) {
+              response.errors.forEach(err => {
                 if (err.path === 'email') setEmailError(err.msg);
                 if (err.path === 'password') setPasswordError(err.msg);
-                });
-            } else if (message === 'Email not verified') {
-                setError(
-                <>
-                    Your email is not verified.{' '}
-                    <button
-                    className="btn btn-link p-0"
-                    onClick={() => handleResendVerification(email)}
-                    >
-                    Resend verification email
-                    </button>
-                </>
-                );
-            } else {
-                if (message.toLowerCase().includes('email')) setEmailError(message);
-                else if (message.toLowerCase().includes('password')) setPasswordError(message);
-                else setError(message);
+              });
             }
-        } finally {
+          
+            // ✅ Handle "Email not verified"
+            else if (response?.error === 'Email not verified') {
+              setError('Your email is not verified.');
+              setShowResend(true); // <== You need to declare this with useState
+            }
+          
+            // ✅ Handle other specific error messages
+            else if (response?.error) {
+              const message = response.error;
+              if (message.toLowerCase().includes('email')) setEmailError(message);
+              else if (message.toLowerCase().includes('password')) setPasswordError(message);
+              else setError(message);
+            }
+          
+            // ✅ Fallback for completely unknown errors
+            else {
+              setError('Login failed. Please try again.');
+            }
+        }
+           finally {
             setLoading(false);
         }
     };
@@ -161,11 +166,17 @@ const LoginForm = () => {
                         
                         {/* Error Messages */}
                         {error && (
-                            <div className="alert alert-danger mb-4">
-                                <div className="d-flex align-items-center">
-                                    <FaExclamationTriangle className="me-2" />
-                                    <span>{error}</span>
-                                </div>
+                            <div className="alert alert-danger mb-4 d-flex align-items-center">
+                            <FaExclamationTriangle className="me-2" />
+                            <span>{error}</span>
+                            {showResend && (
+                                <button
+                                className="btn btn-link p-0 ms-2"
+                                onClick={() => handleResendVerification(email)}
+                                >
+                                Resend verification email
+                                </button>
+                            )}
                             </div>
                         )}
 

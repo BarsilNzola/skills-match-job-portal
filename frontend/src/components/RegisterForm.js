@@ -38,26 +38,20 @@ const RegisterForm = () => {
             await registerUser(formData);
             setIsRegistered(true);
         } catch (error) {
-            const message = error?.response?.data?.error || 'Registration failed. Please try again.';
-            
-            if (error.response?.data?.errors) {
+            const response = error?.response?.data;
+        
+            if (response?.errors?.length) {
                 const newErrors = {};
-                error.response.data.errors.forEach(err => {
+                response.errors.forEach(err => {
                     newErrors[err.path] = err.msg;
                 });
                 setFieldErrors(newErrors);
-            } 
-            else if (message.toLowerCase().includes('name')) {
-                setFieldErrors(prev => ({ ...prev, name: message }));
-            } 
-            else if (message.toLowerCase().includes('email')) {
-                setFieldErrors(prev => ({ ...prev, email: message }));
-            } 
-            else if (message.toLowerCase().includes('password')) {
-                setFieldErrors(prev => ({ ...prev, password: message }));
-            } 
-            else {
-                setError(message);
+            } else if (response?.error) {
+                // Generic error (not field-specific)
+                setError(response.error);
+            } else {
+                // Unexpected error
+                setError('Registration failed. Please try again.');
             }
         } finally {
             setIsLoading(false);
