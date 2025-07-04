@@ -108,15 +108,14 @@ export const getAvatarUrl = (userId) => {
         .catch(() => `${BASE_URL}/default-avatar.jpg`);
 };
 
-export const uploadCV = async (file, onProgress) => {
+export const uploadCV = (file, onProgress) => {
     const formData = new FormData();
     formData.append('cv', file);
     
-    const response = await api.post('/users/upload-cv', formData, {
+    return api.post('/users/upload-cv', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: onProgress
     });
-    return response.data; // { filename: "file.pdf", fileType: "pdf" }
 };
 
 export const downloadCV = async () => {

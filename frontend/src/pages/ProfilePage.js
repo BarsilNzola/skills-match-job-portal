@@ -180,30 +180,37 @@ const ProfilePage = () => {
     try {
       setLoading(prev => ({ ...prev, cv: true }));
       setUi(prev => ({ ...prev, uploadProgress: 0 }));
-      
-      // Upload with progress tracking
+  
+      // Create FormData and append the file
       const formData = new FormData();
       formData.append('cv', file);
-      
-      const { filename, fileType } = await uploadCV(formData, (progressEvent) => {
-        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        setUi(prev => ({ ...prev, uploadProgress: progress }));
+  
+      // Upload with progress tracking
+      const response = await api.post('/users/upload-cv', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUi(prev => ({ ...prev, uploadProgress: progress }));
+        }
       });
   
-      // Update user state
+      // Update user state with new CV info
       setUser(prev => ({
         ...prev,
-        cvFile: filename,
-        cvFileType: fileType
+        cvFile: response.data.filename,
+        cvFileType: response.data.fileType
       }));
-      
+  
       toast.success("CV uploaded successfully!");
     } catch (error) {
-      toast.error(error.message || "Failed to upload CV");
+      console.error("CV upload error:", error);
+      toast.error(error.response?.data?.error || "Failed to upload CV");
     } finally {
       setLoading(prev => ({ ...prev, cv: false }));
       setUi(prev => ({ ...prev, uploadProgress: 0 }));
-      e.target.value = '';
+      e.target.value = ''; // Reset input
     }
   };  
 
