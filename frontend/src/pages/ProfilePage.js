@@ -162,21 +162,13 @@ const ProfilePage = () => {
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+  
     try {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, cv: true } }));
-      
-      const response = await uploadAvatar(file);
-      
-      setState(prev => ({
-        ...prev,
-        user: {
-          ...prev.user,
-          profileImage: response.url || response.profileImage
-        },
-        error: null
-      }));
-
+      setState(prev => ({ ...prev, loading: { ...prev.loading, avatar: true } }));
+  
+      await uploadAvatar(file); // Send to backend
+      await fetchProfile();     // Refresh updated info
+  
       toast.success("Profile picture updated!");
     } catch (error) {
       setState(prev => ({
@@ -184,10 +176,10 @@ const ProfilePage = () => {
         error: error.message || "Failed to upload avatar."
       }));
     } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, cv: false } }));
+      setState(prev => ({ ...prev, loading: { ...prev.loading, avatar: false } }));
       e.target.value = '';
     }
-  };
+  };  
 
   const handleCVUpload = async (e) => {
     const file = e.target.files[0];
@@ -196,23 +188,9 @@ const ProfilePage = () => {
     try {
       setState(prev => ({ ...prev, loading: { ...prev.loading, cv: true } }));
   
-      await uploadCV(file, {
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setState(prev => ({
-            ...prev,
-            user: {
-              ...prev.user,
-              cvFile: `user-cvs/${prev.user.id}/${file.name}`,
-              cvFileType: file.type
-            }
-          }));
-        }
-      });
+      await uploadCV(file);     // Send to backend
+      await fetchProfile();     // Refresh CV info
   
-      await fetchProfile();
       toast.success("CV uploaded successfully!");
     } catch (error) {
       setState(prev => ({
@@ -227,8 +205,7 @@ const ProfilePage = () => {
       }));
       e.target.value = '';
     }
-  };
-  
+  };  
 
   const handleCVConversion = async (targetFormat) => {
     const conversionKey = targetFormat === 'pdf' ? 'pdf' : 'docx';

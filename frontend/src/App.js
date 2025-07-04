@@ -10,6 +10,9 @@ import RegisterForm from './components/RegisterForm';
 import Footer from './components/Footer';
 import { HelmetProvider } from 'react-helmet-async';
 import { Helmet } from 'react-helmet-async';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import './App.css'; 
 
 const App = () => {
@@ -125,6 +128,17 @@ const AppContent = () => {
           <Route path="/register" element={<RegisterForm />} />
         </Routes>
       </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
 
       {/* Footer */}
       <Footer />
