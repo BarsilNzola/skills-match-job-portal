@@ -234,7 +234,7 @@ const JobPage = () => {
           <div className="job-description">
             {state.selectedJob?.description ? (
               state.selectedJob.description.split('\n').map((paragraph, i) => (
-                <p key={i} className="text-white-50">{paragraph}</p>
+                <p key={i} className="text-dark">{paragraph}</p>
               ))
             ) : (
               <p className="text-muted">No description available for this job.</p>
